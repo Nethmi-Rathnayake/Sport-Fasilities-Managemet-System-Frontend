@@ -1,11 +1,11 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "../../assets/usjp-logo__1_-removebg-preview.png";
-
-// =============================================
-// API BASE URL
-const API_BASE = "http://localhost:8000/api";
-// =============================================
+import api from "../../services/api";
+import {
+  sendOtp as sendOtpRequest,
+  verifyOtp as verifyOtpRequest,
+} from "../../services/authService";
 
 //const SPORTS = ["Cricket","Football","Badminton","Swimming","Athletics","Volleyball","Basketball","Tennis","Rugby","Netball","Table Tennis","Karate"];
 const YEARS = Array.from({ length: 10 }, (_, i) => (new Date().getFullYear() - i).toString());
@@ -58,6 +58,111 @@ export default function ClubRegistration() {
   const [step, setStep] = useState(1);
   const [submitted, setSubmitted] = useState(false);
 
+  // ── Email verification gate (mirrors StudentRegistration) ──
+  // phase "email" → "otp" → "wizard". The club details wizard (numeric `step`)
+  // is only reachable once the email is OTP-verified.
+  const [phase, setPhase] = useState("email"); // "email" | "otp" | "wizard"
+  const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [otpSending, setOtpSending] = useState(false);
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [otpError, setOtpError] = useState("");
+  const [otpVerifying, setOtpVerifying] = useState(false);
+  const [timer, setTimer] = useState(165);
+  const inputRefs = useRef([]);
+
+  // ── Timer countdown for the OTP screen ──
+  useEffect(() => {
+    if (phase !== "otp" || timer <= 0) return;
+    const id = setInterval(() => setTimer((t) => t - 1), 1000);
+    return () => clearInterval(id);
+  }, [phase, timer]);
+
+  const minutes = String(Math.floor(timer / 60)).padStart(2, "0");
+  const seconds = String(timer % 60).padStart(2, "0");
+
+  // ── OTP handlers ──
+  const sendOtp = async () => {
+    setOtpSending(true);
+    try {
+      await sendOtpRequest(email);
+      return true;
+    } catch (err) {
+      return false;
+    } finally {
+      setOtpSending(false);
+    }
+  };
+
+  const handleSendOtp = async () => {
+    if (!email.includes("@")) {
+      setEmailError("Enter a valid email address.");
+      return;
+    }
+    setEmailError("");
+    const ok = await sendOtp();
+    if (!ok) {
+      setEmailError("Failed to send OTP. Please try again.");
+      return;
+    }
+    setTimer(165);
+    setOtp(["", "", "", "", "", ""]);
+    setPhase("otp");
+  };
+
+  const handleResendOtp = async () => {
+    setOtp(["", "", "", "", "", ""]);
+    setOtpError("");
+    const ok = await sendOtp();
+    if (!ok) {
+      setOtpError("Failed to resend OTP. Please try again.");
+      return;
+    }
+    setTimer(165);
+  };
+
+  const handleOtpChange = (index, value) => {
+    if (!/^\d*$/.test(value)) return;
+    const newOtp = [...otp];
+    newOtp[index] = value.slice(-1);
+    setOtp(newOtp);
+    if (value && index < 5) inputRefs.current[index + 1]?.focus();
+  };
+
+  const handleOtpKeyDown = (index, e) => {
+    if (e.key === "Backspace" && !otp[index] && index > 0)
+      inputRefs.current[index - 1]?.focus();
+  };
+
+  const handleOtpPaste = (e) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    const newOtp = [...otp];
+    pasted.split("").forEach((ch, i) => {
+      newOtp[i] = ch;
+    });
+    setOtp(newOtp);
+    inputRefs.current[Math.min(pasted.length, 5)]?.focus();
+  };
+
+  const handleVerifyOtp = async () => {
+    const code = otp.join("");
+    if (code.length < 6) {
+      setOtpError("Enter all 6 digits.");
+      return;
+    }
+    setOtpError("");
+    setOtpVerifying(true);
+    try {
+      await verifyOtpRequest(email, code);
+      setPhase("wizard");
+    } catch (err) {
+      setOtpError(err?.response?.data?.message || "Invalid OTP. Please try again.");
+    } finally {
+      setOtpVerifying(false);
+    }
+  };
+
   // Club details
   const [club, setClub] = useState({
     name: "",
@@ -66,11 +171,31 @@ export default function ClubRegistration() {
     registerNumber: "",
     primaryPhone: "",
     secondaryPhone: "",
+    address: "",
   });
   const [clubErrors, setClubErrors] = useState({});
 
   // Coaches
   const [coaches, setCoaches] = useState([emptyCoach()]);
+
+  // Submit state for POST /api/club-registrations
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+
+  // Live fee preview — POST /api/club-registration-fee-preview { coach_count }.
+  // Falls back to the local estimate if the call fails or the shape is unknown.
+  const [feePreview, setFeePreview] = useState(null);
+  useEffect(() => {
+    if (phase !== "wizard") return;
+    let active = true;
+    api
+      .post("/api/club-registration-fee-preview", { coach_count: coaches.length })
+      .then((res) => active && setFeePreview(res.data))
+      .catch(() => active && setFeePreview(null));
+    return () => {
+      active = false;
+    };
+  }, [phase, coaches.length]);
 
   const handleClubChange = (e) => {
     setClub({ ...club, [e.target.name]: e.target.value });
@@ -103,6 +228,7 @@ export default function ClubRegistration() {
     if (!club.year) errs.year = "Required";
     if (!club.registerNumber) errs.registerNumber = "Required";
     if (!club.primaryPhone) errs.primaryPhone = "Required";
+    if (!club.address) errs.address = "Required";
     setClubErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -123,12 +249,60 @@ export default function ClubRegistration() {
     setStep(s => s + 1);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    // Every coach needs a photo — the API requires coach_photos[].
+    if (coaches.some((c) => !c.photo)) {
+      setSubmitError("Please upload a photo for every coach.");
+      return;
+    }
+
     // =============================================
-    // API CALL — POST /api/clubs/register
-    // Body: FormData { club details + coaches[] + photos }
+    // API CALL — POST /api/club-registrations (multipart/form-data).
+    // Documented fields (live OpenAPI): clubName, regNo, primaryPhoneNumber,
+    // address, coaches (JSON string array), coach_photos[] (files, same order
+    // as the coaches array). Gated by the OTP-verified session cookie, which
+    // `api` carries via withCredentials.
     // =============================================
-    setSubmitted(true);
+    const fd = new FormData();
+    fd.append("email", email);
+    fd.append("clubName", club.name);
+    fd.append("regNo", club.registerNumber);
+    fd.append("primaryPhoneNumber", club.primaryPhone);
+    fd.append("address", club.address);
+
+    const coachPayload = coaches.map((c) => ({
+      fullName: c.fullName,
+      nameWithInitials: c.nameWithInitials,
+      nic: c.nationalId,
+      primaryPhone: c.primaryPhone,
+      secondaryPhone: c.secondaryPhone || null,
+      dob: c.dob || null,
+      address: c.address,
+    }));
+    fd.append("coaches", JSON.stringify(coachPayload));
+    // Photos in the SAME order as the coaches array so the backend can pair them.
+    coaches.forEach((c) => {
+      if (c.photo) fd.append("coach_photos[]", c.photo);
+    });
+
+    setSubmitError("");
+    setSubmitting(true);
+    try {
+      await api.post("/api/club-registrations", fd);
+      setSubmitted(true);
+    } catch (err) {
+      const data = err?.response?.data;
+      const firstError = data?.errors
+        ? Object.values(data.errors)[0]?.[0]
+        : null;
+      setSubmitError(
+        firstError ||
+          data?.message ||
+          "Club registration failed. Please try again."
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // ── Header ──────────────────────────────────
@@ -174,6 +348,139 @@ export default function ClubRegistration() {
       ))}
     </div>
   );
+
+  // Shared compact header for the email/OTP gate screens.
+  const GateHeader = () => (
+    <div className="bg-white rounded-2xl shadow-sm p-4 mb-5 flex items-center gap-3">
+      <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: "#e8a020" }}>
+        <img src={logo} alt="USJ" className="w-8 h-8 object-contain" />
+      </div>
+      <div>
+        <p className="font-bold text-sm" style={{ color: "#0f1c3f" }}>Club Registration</p>
+        <p className="text-xs text-gray-400">Verify your email to start registering your club.</p>
+      </div>
+    </div>
+  );
+
+  // ══════════════════════════════════════════════
+  // GATE STEP 1 — EMAIL
+  // ══════════════════════════════════════════════
+  if (phase === "email") {
+    return (
+      <div className="min-h-screen py-6 px-4 flex flex-col items-center justify-center" style={{ backgroundColor: "#f0f2f5" }}>
+        <div className="w-full max-w-sm">
+          <GateHeader />
+          <div className="bg-white rounded-2xl shadow-sm p-6">
+            <div className="flex items-center gap-2 mb-5">
+              <div className="text-white text-xs font-bold px-2.5 py-1 rounded-lg" style={{ backgroundColor: "#0f1c3f" }}>REG</div>
+              <h1 className="text-base font-bold" style={{ color: "#0f1c3f" }}>Club Registration</h1>
+            </div>
+
+            <p className="text-sm text-gray-500 mb-5 text-center">
+              Enter the club's email to verify your identity before registering.
+            </p>
+
+            <label className="block text-xs font-medium text-gray-500 mb-1">
+              Email Address <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => { setEmail(e.target.value); setEmailError(""); }}
+              placeholder="club@sjp.ac.lk"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mb-1"
+            />
+            {emailError && <p className="text-xs text-red-500 mb-2">{emailError}</p>}
+
+            <button
+              onClick={handleSendOtp}
+              disabled={otpSending || !email}
+              className="w-full text-white font-semibold py-2.5 rounded-xl text-sm mt-3 transition disabled:opacity-50"
+              style={{ backgroundColor: "#1a56db" }}
+              onMouseEnter={(e) => (e.target.style.backgroundColor = "#1648c8")}
+              onMouseLeave={(e) => (e.target.style.backgroundColor = "#1a56db")}>
+              {otpSending ? "Sending OTP…" : "Send OTP"}
+            </button>
+
+            <div className="flex items-center justify-center gap-1.5 mt-4">
+              <svg className="w-3.5 h-3.5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-xs text-gray-400">Email verification required to register</p>
+            </div>
+          </div>
+
+          <div className="text-center mt-4">
+            <button onClick={() => navigate("/select-registration")} className="text-xs text-gray-400 hover:text-gray-600">
+              ← Back to registration options
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ══════════════════════════════════════════════
+  // GATE STEP 2 — OTP VERIFY
+  // ══════════════════════════════════════════════
+  if (phase === "otp") {
+    return (
+      <div className="min-h-screen py-6 px-4 flex flex-col items-center justify-center" style={{ backgroundColor: "#f0f2f5" }}>
+        <div className="w-full max-w-sm">
+          <GateHeader />
+          <div className="bg-white rounded-2xl shadow-sm p-6 text-center">
+            <h2 className="text-lg font-bold mb-1" style={{ color: "#0f1c3f" }}>Verify Your Email</h2>
+            <p className="text-xs text-gray-400 mb-1">Enter the 6-digit code sent to</p>
+            <p className="text-sm font-semibold mb-5" style={{ color: "#1a56db" }}>{email}</p>
+
+            <div className="flex justify-center gap-2 mb-3" onPaste={handleOtpPaste}>
+              {otp.map((digit, i) => (
+                <input
+                  key={i}
+                  ref={(el) => (inputRefs.current[i] = el)}
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={1}
+                  value={digit}
+                  onChange={(e) => handleOtpChange(i, e.target.value)}
+                  onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                  className="w-11 h-12 border-2 border-gray-200 rounded-lg text-center text-xl font-bold focus:outline-none focus:border-blue-500 transition"
+                />
+              ))}
+            </div>
+
+            {otpError && <p className="text-xs text-red-500 mb-2">{otpError}</p>}
+
+            <p className="text-xs text-gray-400 mb-4">
+              {timer > 0 ? (
+                <>Code expires in <span className="font-semibold text-red-500">{minutes}:{seconds}</span></>
+              ) : (
+                <span className="text-red-500 font-semibold">Code expired.</span>
+              )}{" "}
+              <button onClick={handleResendOtp} disabled={otpSending}
+                className="font-semibold hover:underline ml-1 disabled:opacity-50" style={{ color: "#1a56db" }}>
+                {otpSending ? "Sending…" : "Resend OTP"}
+              </button>
+            </p>
+
+            <button
+              onClick={handleVerifyOtp}
+              disabled={otpVerifying || otp.join("").length < 6}
+              className="w-full text-white font-semibold py-2.5 rounded-xl text-sm transition disabled:opacity-50"
+              style={{ backgroundColor: "#1a56db" }}
+              onMouseEnter={(e) => (e.target.style.backgroundColor = "#1648c8")}
+              onMouseLeave={(e) => (e.target.style.backgroundColor = "#1a56db")}>
+              {otpVerifying ? "Verifying…" : "Verify & Continue"}
+            </button>
+
+            <button onClick={() => setPhase("email")} className="mt-3 text-xs text-gray-400 hover:text-gray-600 transition w-full">
+              Change email
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // ══════════════════════════════════════════════
   // SUBMITTED
@@ -230,7 +537,19 @@ export default function ClubRegistration() {
   const baseFee = 5000;
   const extraCoaches = Math.max(0, coaches.length - 2);
   const extraFee = extraCoaches * 2500;
-  const totalFee = baseFee + extraFee;
+  const localTotal = baseFee + extraFee;
+  // Prefer the server-calculated fee when the preview endpoint responds; the
+  // exact key isn't pinned in the spec, so accept the common ones, else fall
+  // back to the local estimate.
+  const apiTotal =
+    feePreview != null
+      ? feePreview.total ??
+        feePreview.total_fee ??
+        feePreview.totalFee ??
+        feePreview.fee ??
+        feePreview.amount
+      : null;
+  const totalFee = apiTotal != null ? Number(apiTotal) : localTotal;
 
   // ══════════════════════════════════════════════
   // SUMMARY PANEL (right)
@@ -254,6 +573,7 @@ export default function ClubRegistration() {
           ["Register Number", club.registerNumber || "—"],
           ["Primary Phone", club.primaryPhone || "—"],
           ["Secondary Phone", club.secondaryPhone || "—"],
+          ["Address", club.address || "—"],
         ].map(([k, v]) => (
           <div key={k} className="flex justify-between py-1 border-b border-gray-50 last:border-0">
             <span className="text-xs text-gray-400">{k}</span>
@@ -351,16 +671,22 @@ export default function ClubRegistration() {
             <div className="bg-green-50 border border-green-100 rounded-lg p-2 mb-3 text-center">
               <p className="text-xs text-green-700">After review, proceed to payment</p>
             </div>
+            {submitError && (
+              <p className="text-xs text-red-500 mb-2 text-center">{submitError}</p>
+            )}
             <button
               onClick={handleSubmit}
-              className="w-full text-white font-semibold py-2.5 rounded-lg text-sm transition flex items-center justify-center gap-2"
+              disabled={submitting}
+              className="w-full text-white font-semibold py-2.5 rounded-lg text-sm transition flex items-center justify-center gap-2 disabled:opacity-50"
               style={{ backgroundColor: "#1a56db" }}
-              onMouseEnter={e => e.target.style.backgroundColor = "#1648c8"}
-              onMouseLeave={e => e.target.style.backgroundColor = "#1a56db"}>
-              Proceed to Payment
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-              </svg>
+              onMouseEnter={e => !submitting && (e.target.style.backgroundColor = "#1648c8")}
+              onMouseLeave={e => !submitting && (e.target.style.backgroundColor = "#1a56db")}>
+              {submitting ? "Submitting…" : "Proceed to Payment"}
+              {!submitting && (
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+              )}
             </button>
           </div>
         )}
@@ -406,6 +732,12 @@ export default function ClubRegistration() {
                   </Field>
                   <Field label="Secondary Phone Number">
                     <Input icon="📞" name="secondaryPhone" value={club.secondaryPhone} onChange={handleClubChange} placeholder="Enter secondary phone number (optional)" />
+                  </Field>
+                </div>
+
+                <div className="mt-4">
+                  <Field label="Address" required error={clubErrors.address}>
+                    <Input name="address" value={club.address} onChange={handleClubChange} placeholder="Sports Complex, University of Sri Jayewardenepura" />
                   </Field>
                 </div>
               </div>

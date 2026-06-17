@@ -1,18 +1,19 @@
 import React from "react";
 import { Toaster } from "react-hot-toast";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/auth/LoginPage";
 import SelectRegistration from "./pages/auth/SelectRegistration";
 import StudentRegistration from "./pages/auth/StudentRegistration";
 import ClubRegistration from "./pages/auth/ClubRegistration";
-
 
 function App() {
   return (
     <BrowserRouter>
       <Toaster position="top-right" reverseOrder={false} />
       <Routes>
-        <Route path="/" element={<LoginPage />} />
+        <Route path="/" element={<HomePage />} />
+        <Route path="/login" element={<LoginPage />} />
         <Route path="/select-registration" element={<SelectRegistration />} />
         <Route path="/student-registration" element={<StudentRegistration />} />
         <Route path="/club-registration" element={<ClubRegistration />} />

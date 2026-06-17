@@ -244,14 +244,16 @@ export default function StudentRegistration() {
 
     // =============================================
     // API CALL — POST /api/member-registrations (multipart/form-data).
-    // The backend accepts camelCase aliases (see MemberRegistrationController
-    // ::normalizedInput). studentId and dob are optional.
+    // Field names follow the live OpenAPI spec (source of truth):
+    // fullName, nameWithInitials, nic, primaryPhone, dob, address,
+    // membershipType (club|club_student|independent), clubId, photo.
     // =============================================
     const fd = new FormData();
     fd.append("email", email);
     fd.append("fullName", form.fullName);
     fd.append("nameWithInitials", form.nameWithInitials);
-    if (form.studentId) fd.append("studentId", form.studentId);
+    // The "Student ID / NIC" input maps to the API's `nic` field.
+    if (form.studentId) fd.append("nic", form.studentId);
     if (form.dob) fd.append("dob", form.dob);
     fd.append("primaryPhone", form.primaryPhone);
     if (form.secondaryPhone) fd.append("secondaryPhone", form.secondaryPhone);
