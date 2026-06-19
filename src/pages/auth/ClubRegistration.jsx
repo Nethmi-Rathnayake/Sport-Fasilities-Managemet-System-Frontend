@@ -9,6 +9,7 @@ import {
 
 //const SPORTS = ["Cricket","Football","Badminton","Swimming","Athletics","Volleyball","Basketball","Tennis","Rugby","Netball","Table Tennis","Karate"];
 const YEARS = Array.from({ length: 10 }, (_, i) => (new Date().getFullYear() - i).toString());
+const TITLE_OPTIONS = ["Mr", "Mrs", "Ms", "Miss", "Dr", "Rev."];
 
 const STEPS = [
   { num: 1, label: "Club Details", sub: "Basic information" },
@@ -21,7 +22,7 @@ const STEPS = [
 //    which makes fields lose focus while typing) ──
 const Field = ({ label, required, error, children }) => (
   <div>
-    <label className="block text-xs font-medium text-gray-600 mb-1">
+    <label className="block text-xs font-medium text-gray-700 mb-1">
       {label} {required && <span className="text-red-500">*</span>}
       {!required && <span className="text-gray-400 font-normal ml-1">(Optional)</span>}
     </label>
@@ -35,15 +36,19 @@ const Input = ({ icon, ...props }) => (
     {icon && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">{icon}</span>}
     <input
       {...props}
-      className={`w-full border border-gray-200 rounded-lg py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 placeholder-gray-400 ${icon ? "pl-8 pr-3" : "px-3"}`}
+      className={`w-full border border-gray-300 rounded-lg py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 placeholder-gray-400 ${icon ? "pl-8 pr-3" : "px-3"}`}
     />
   </div>
 );
 
 const emptyCoach = () => ({
   id: Date.now() + Math.random(),
-  fullName: "",
-  nameWithInitials: "",
+  title: "",
+  initials: "",
+  nameWithInitials: "", // Name denoted by initials
+  lastName: "",
+  memberGenderId: "",
+  email: "",
   nationalId: "",
   primaryPhone: "",
   secondaryPhone: "",
@@ -178,6 +183,20 @@ export default function ClubRegistration() {
   // Coaches
   const [coaches, setCoaches] = useState([emptyCoach()]);
 
+  // ── Genders (category-driven; from GET /api/member-genders) ──
+  const [genders, setGenders] = useState([]);
+  useEffect(() => {
+    if (phase !== "wizard") return;
+    let active = true;
+    api
+      .get("/api/member-genders")
+      .then((res) => active && setGenders(res.data))
+      .catch(() => active && setGenders([]));
+    return () => {
+      active = false;
+    };
+  }, [phase]);
+
   // Submit state for POST /api/club-registrations
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
@@ -234,9 +253,25 @@ export default function ClubRegistration() {
   };
 
   const validateCoaches = () => {
-    for (const c of coaches) {
-      if (!c.fullName || !c.nameWithInitials || !c.nationalId || !c.primaryPhone || !c.address) {
+    for (let i = 0; i < coaches.length; i++) {
+      const c = coaches[i];
+      if (
+        !c.title ||
+        !c.initials ||
+        !c.nameWithInitials ||
+        !c.lastName ||
+        !c.memberGenderId ||
+        !c.nationalId ||
+        !c.primaryPhone ||
+        !c.address
+      ) {
         alert("Please fill all required coach fields.");
+        return false;
+      }
+      // The primary coach (index 0) uses the OTP-verified email automatically.
+      // Additional coaches must supply a valid email — no OTP verification needed.
+      if (i > 0 && (!c.email || !c.email.includes("@"))) {
+        alert("Please enter a valid email for every additional coach.");
         return false;
       }
     }
@@ -270,9 +305,13 @@ export default function ClubRegistration() {
     fd.append("primaryPhoneNumber", club.primaryPhone);
     fd.append("address", club.address);
 
-    const coachPayload = coaches.map((c) => ({
+    const coachPayload = coaches.map((c, i) => ({
       fullName: c.fullName,
       nameWithInitials: c.nameWithInitials,
+      // Primary coach (index 0) is the OTP-verified email; the backend also
+      // overrides coaches[0].email with the verified session email. Additional
+      // coaches send the email typed in the form (stored only, no OTP).
+      email: i === 0 ? email : c.email,
       nic: c.nationalId,
       primaryPhone: c.primaryPhone,
       secondaryPhone: c.secondaryPhone || null,
@@ -305,17 +344,22 @@ export default function ClubRegistration() {
     }
   };
 
-  // ── Header ──────────────────────────────────
+  // ── Header (branding, matches the login page) ──────────────
   const Header = () => (
-    <div className="flex items-center gap-3 px-4 sm:px-6 py-3 bg-white border-b border-gray-100">
-      <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: "#e8a020" }}>
-        <img src={logo} alt="USJ" className="w-6 h-6 object-contain" />
-      </div>
+    <div className="flex items-center gap-3 px-4 sm:px-6 py-4">
+      <img src={logo} alt="USJ Logo" className="w-12 h-12 object-contain flex-shrink-0" />
       <div>
-        <p className="font-bold text-sm" style={{ color: "#0f1c3f" }}>Club Registration</p>
-        <p className="text-xs text-gray-400">Register your club and start your journey with USJ Sports.</p>
+        <p className="font-semibold text-gray-800 text-sm leading-tight">University of Sri Jayewardenepura</p>
+        <p className="text-xs text-blue-600">Sports Facility Portal</p>
       </div>
     </div>
+  );
+
+  // Footer copyright shared by every step (matches the login page).
+  const Footer = () => (
+    <p className="text-xs text-gray-400 text-center py-6">
+      © {new Date().getFullYear()} University of Sri Jayewardenepura
+    </p>
   );
 
   // ── Step indicator ───────────────────────────
@@ -324,12 +368,13 @@ export default function ClubRegistration() {
       {STEPS.map((s, i) => (
         <React.Fragment key={s.num}>
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => step > s.num && setStep(s.num)}>
-            <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 flex-shrink-0 transition-all"
-              style={{
-                backgroundColor: step > s.num ? "#16a34a" : step === s.num ? "#1a56db" : "#fff",
-                borderColor: step > s.num ? "#16a34a" : step === s.num ? "#1a56db" : "#d1d5db",
-                color: step >= s.num ? "#fff" : "#9ca3af",
-              }}>
+            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 flex-shrink-0 transition-all ${
+              step > s.num
+                ? "bg-green-500 text-white border-green-500"
+                : step === s.num
+                ? "bg-blue-700 text-white border-blue-700"
+                : "bg-white text-gray-400 border-gray-300"
+            }`}>
               {step > s.num ? (
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
@@ -337,27 +382,25 @@ export default function ClubRegistration() {
               ) : s.num}
             </div>
             <div className="hidden sm:block">
-              <p className="text-xs font-semibold" style={{ color: step === s.num ? "#1a56db" : step > s.num ? "#16a34a" : "#9ca3af" }}>{s.label}</p>
+              <p className={`text-xs font-semibold ${step === s.num ? "text-blue-700" : step > s.num ? "text-green-600" : "text-gray-400"}`}>{s.label}</p>
               <p className="text-xs text-gray-400">{s.sub}</p>
             </div>
           </div>
           {i < STEPS.length - 1 && (
-            <div className="flex-1 h-px mx-3" style={{ backgroundColor: step > s.num ? "#16a34a" : "#e5e7eb" }} />
+            <div className={`flex-1 h-px mx-3 ${step > s.num ? "bg-green-500" : "bg-gray-200"}`} />
           )}
         </React.Fragment>
       ))}
     </div>
   );
 
-  // Shared compact header for the email/OTP gate screens.
+  // Shared branding block for the email/OTP gate cards (matches the login page).
   const GateHeader = () => (
-    <div className="bg-white rounded-2xl shadow-sm p-4 mb-5 flex items-center gap-3">
-      <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: "#e8a020" }}>
-        <img src={logo} alt="USJ" className="w-8 h-8 object-contain" />
-      </div>
+    <div className="flex items-center gap-3 mb-6">
+      <img src={logo} alt="USJ Logo" className="w-12 h-12 object-contain flex-shrink-0" />
       <div>
-        <p className="font-bold text-sm" style={{ color: "#0f1c3f" }}>Club Registration</p>
-        <p className="text-xs text-gray-400">Verify your email to start registering your club.</p>
+        <p className="font-semibold text-gray-800 text-sm leading-tight">University of Sri Jayewardenepura</p>
+        <p className="text-xs text-blue-600">Sports Facility Portal</p>
       </div>
     </div>
   );
@@ -367,20 +410,17 @@ export default function ClubRegistration() {
   // ══════════════════════════════════════════════
   if (phase === "email") {
     return (
-      <div className="min-h-screen py-6 px-4 flex flex-col items-center justify-center" style={{ backgroundColor: "#f0f2f5" }}>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 py-6 px-4 flex flex-col items-center justify-center">
         <div className="w-full max-w-sm">
-          <GateHeader />
-          <div className="bg-white rounded-2xl shadow-sm p-6">
-            <div className="flex items-center gap-2 mb-5">
-              <div className="text-white text-xs font-bold px-2.5 py-1 rounded-lg" style={{ backgroundColor: "#0f1c3f" }}>REG</div>
-              <h1 className="text-base font-bold" style={{ color: "#0f1c3f" }}>Club Registration</h1>
-            </div>
+          <div className="bg-white rounded-2xl shadow-lg p-8 w-full">
+            <GateHeader />
 
-            <p className="text-sm text-gray-500 mb-5 text-center">
+            <h1 className="text-xl font-bold text-gray-900 mb-1 text-center">Club Registration</h1>
+            <p className="text-sm text-gray-500 mb-6 text-center">
               Enter the club's email to verify your identity before registering.
             </p>
 
-            <label className="block text-xs font-medium text-gray-500 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Email Address <span className="text-red-500">*</span>
             </label>
             <input
@@ -388,34 +428,32 @@ export default function ClubRegistration() {
               value={email}
               onChange={(e) => { setEmail(e.target.value); setEmailError(""); }}
               placeholder="club@sjp.ac.lk"
-              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mb-1"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mb-1"
             />
             {emailError && <p className="text-xs text-red-500 mb-2">{emailError}</p>}
 
             <button
               onClick={handleSendOtp}
               disabled={otpSending || !email}
-              className="w-full text-white font-semibold py-2.5 rounded-xl text-sm mt-3 transition disabled:opacity-50"
-              style={{ backgroundColor: "#1a56db" }}
-              onMouseEnter={(e) => (e.target.style.backgroundColor = "#1648c8")}
-              onMouseLeave={(e) => (e.target.style.backgroundColor = "#1a56db")}>
+              className="w-full bg-blue-700 hover:bg-blue-800 disabled:bg-blue-300 text-white font-semibold py-2.5 rounded-lg text-sm mt-2 transition">
               {otpSending ? "Sending OTP…" : "Send OTP"}
             </button>
 
-            <div className="flex items-center justify-center gap-1.5 mt-4">
+            <p className="flex items-center justify-center gap-1.5 text-xs text-gray-400 mt-4">
               <svg className="w-3.5 h-3.5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <p className="text-xs text-gray-400">Email verification required to register</p>
-            </div>
+              Email verification required to register
+            </p>
           </div>
 
-          <div className="text-center mt-4">
-            <button onClick={() => navigate("/select-registration")} className="text-xs text-gray-400 hover:text-gray-600">
+          <div className="text-center mt-5">
+            <button onClick={() => navigate("/select-registration")} className="text-sm text-blue-600 font-semibold hover:underline">
               ← Back to registration options
             </button>
           </div>
         </div>
+        <Footer />
       </div>
     );
   }
@@ -425,15 +463,16 @@ export default function ClubRegistration() {
   // ══════════════════════════════════════════════
   if (phase === "otp") {
     return (
-      <div className="min-h-screen py-6 px-4 flex flex-col items-center justify-center" style={{ backgroundColor: "#f0f2f5" }}>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 py-6 px-4 flex flex-col items-center justify-center">
         <div className="w-full max-w-sm">
-          <GateHeader />
-          <div className="bg-white rounded-2xl shadow-sm p-6 text-center">
-            <h2 className="text-lg font-bold mb-1" style={{ color: "#0f1c3f" }}>Verify Your Email</h2>
-            <p className="text-xs text-gray-400 mb-1">Enter the 6-digit code sent to</p>
-            <p className="text-sm font-semibold mb-5" style={{ color: "#1a56db" }}>{email}</p>
+          <div className="bg-white rounded-2xl shadow-lg p-8 w-full text-center">
+            <GateHeader />
 
-            <div className="flex justify-center gap-2 mb-3" onPaste={handleOtpPaste}>
+            <h2 className="text-xl font-bold text-gray-900 mb-1">Verify Your Email</h2>
+            <p className="text-sm text-gray-500 mb-1">Enter the 6 digit code sent to</p>
+            <p className="text-sm font-semibold text-blue-700 mb-6">{email}</p>
+
+            <div className="flex justify-center gap-2 mb-4" onPaste={handleOtpPaste}>
               {otp.map((digit, i) => (
                 <input
                   key={i}
@@ -444,21 +483,21 @@ export default function ClubRegistration() {
                   value={digit}
                   onChange={(e) => handleOtpChange(i, e.target.value)}
                   onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                  className="w-11 h-12 border-2 border-gray-200 rounded-lg text-center text-xl font-bold focus:outline-none focus:border-blue-500 transition"
+                  className="w-11 h-13 border-2 border-gray-300 rounded-lg text-center text-xl font-bold focus:outline-none focus:border-blue-600 transition py-2"
                 />
               ))}
             </div>
 
             {otpError && <p className="text-xs text-red-500 mb-2">{otpError}</p>}
 
-            <p className="text-xs text-gray-400 mb-4">
+            <p className="text-xs text-gray-500 mb-4">
               {timer > 0 ? (
                 <>Code expires in <span className="font-semibold text-red-500">{minutes}:{seconds}</span></>
               ) : (
                 <span className="text-red-500 font-semibold">Code expired.</span>
               )}{" "}
               <button onClick={handleResendOtp} disabled={otpSending}
-                className="font-semibold hover:underline ml-1 disabled:opacity-50" style={{ color: "#1a56db" }}>
+                className="text-blue-600 font-semibold hover:underline ml-1 disabled:opacity-50">
                 {otpSending ? "Sending…" : "Resend OTP"}
               </button>
             </p>
@@ -466,18 +505,16 @@ export default function ClubRegistration() {
             <button
               onClick={handleVerifyOtp}
               disabled={otpVerifying || otp.join("").length < 6}
-              className="w-full text-white font-semibold py-2.5 rounded-xl text-sm transition disabled:opacity-50"
-              style={{ backgroundColor: "#1a56db" }}
-              onMouseEnter={(e) => (e.target.style.backgroundColor = "#1648c8")}
-              onMouseLeave={(e) => (e.target.style.backgroundColor = "#1a56db")}>
+              className="w-full bg-blue-700 hover:bg-blue-800 disabled:bg-blue-300 text-white font-semibold py-2.5 rounded-lg text-sm transition">
               {otpVerifying ? "Verifying…" : "Verify & Continue"}
             </button>
 
-            <button onClick={() => setPhase("email")} className="mt-3 text-xs text-gray-400 hover:text-gray-600 transition w-full">
+            <button onClick={() => setPhase("email")} className="mt-3 text-xs text-gray-400 hover:text-blue-600 transition w-full">
               Change email
             </button>
           </div>
         </div>
+        <Footer />
       </div>
     );
   }
@@ -487,14 +524,14 @@ export default function ClubRegistration() {
   // ══════════════════════════════════════════════
   if (submitted) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: "#f0f2f5" }}>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 flex flex-col items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-md text-center">
-          <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: "#e8f0fe" }}>
-            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="#1a56db">
+          <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 bg-blue-50">
+            <svg className="w-8 h-8 text-blue-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <h2 className="text-xl font-bold mb-2" style={{ color: "#0f1c3f" }}>Club Registration Submitted!</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Club Registration Submitted!</h2>
           <p className="text-sm text-gray-500 mb-5">Complete your payment to activate your club registration.</p>
           <div className="bg-gray-50 rounded-xl p-4 mb-5 text-left space-y-3">
             {[
@@ -517,16 +554,14 @@ export default function ClubRegistration() {
             ))}
           </div>
           <button onClick={() => alert("Payment gateway — coming soon!")}
-            className="w-full text-white font-semibold py-3 rounded-xl text-sm mb-3 transition"
-            style={{ backgroundColor: "#1a56db" }}
-            onMouseEnter={e => e.target.style.backgroundColor = "#1648c8"}
-            onMouseLeave={e => e.target.style.backgroundColor = "#1a56db"}>
+            className="w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold py-3 rounded-lg text-sm mb-3 transition">
             Proceed to Payment
           </button>
-          <button onClick={() => navigate("/")} className="w-full text-sm text-gray-400 hover:text-gray-600">
+          <button onClick={() => navigate("/")} className="w-full text-sm text-gray-400 hover:text-blue-600">
             Back to Login
           </button>
         </div>
+        <Footer />
       </div>
     );
   }
@@ -559,9 +594,10 @@ export default function ClubRegistration() {
       {/* Club Info */}
       <div className="bg-white rounded-xl border border-gray-100 p-4">
         <div className="flex items-center justify-between mb-3">
-          <p className="text-xs font-bold" style={{ color: "#1a56db" }}>Club Information</p>
+          <p className="text-xs font-bold text-blue-700">Club Information</p>
           {step !== 3 && (
-            <button onClick={() => setStep(1)} className="text-xs flex items-center gap-1" style={{ color: "#1a56db" }}>
+            <button onClick={() => setStep(1)} className="text-xs flex items-center gap-1 text-blue-600">
+
               <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
               Edit
             </button>
@@ -586,11 +622,12 @@ export default function ClubRegistration() {
       {coaches.some(c => c.fullName) && (
         <div className="bg-white rounded-xl border border-gray-100 p-4">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-xs font-bold" style={{ color: "#1a56db" }}>
+            <p className="text-xs font-bold text-blue-700">
               Coach List ({coaches.length} Coach{coaches.length > 1 ? "es" : ""})
             </p>
             {step !== 3 && (
-              <button onClick={() => setStep(2)} className="text-xs flex items-center gap-1" style={{ color: "#1a56db" }}>
+              <button onClick={() => setStep(2)} className="text-xs flex items-center gap-1 text-blue-600">
+
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
@@ -618,7 +655,7 @@ export default function ClubRegistration() {
                       <span className="text-xs text-gray-400">({c.nameWithInitials})</span>
                     )}
                     {i === 0 && (
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: "#e8f0fe", color: "#1a56db" }}>
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">
                         Primary Coach
                       </span>
                     )}
@@ -629,6 +666,7 @@ export default function ClubRegistration() {
               {/* Coach details grid */}
               <div className="space-y-1 pl-1">
                 {[
+                  ["Email", i === 0 ? email : c.email],
                   ["National ID", c.nationalId],
                   ["Primary Phone", c.primaryPhone],
                   ["Secondary Phone", c.secondaryPhone],
@@ -648,7 +686,7 @@ export default function ClubRegistration() {
 
       {/* Fee Breakdown */}
       <div className="bg-white rounded-xl border border-gray-100 p-4">
-        <p className="text-xs font-bold mb-3" style={{ color: "#1a56db" }}>Registration Fee</p>
+        <p className="text-xs font-bold mb-3 text-blue-700">Registration Fee</p>
         <div className="space-y-2">
           <div className="flex justify-between">
             <span className="text-xs text-gray-500">Base fee (Club + 2 Coaches)</span>
@@ -662,7 +700,7 @@ export default function ClubRegistration() {
           )}
           <div className="flex justify-between border-t pt-2 mt-2">
             <span className="text-xs font-bold text-gray-700">Total</span>
-            <span className="text-sm font-bold" style={{ color: "#1a56db" }}>LKR {totalFee.toLocaleString()}</span>
+            <span className="text-sm font-bold text-blue-700">LKR {totalFee.toLocaleString()}</span>
           </div>
         </div>
 
@@ -677,10 +715,7 @@ export default function ClubRegistration() {
             <button
               onClick={handleSubmit}
               disabled={submitting}
-              className="w-full text-white font-semibold py-2.5 rounded-lg text-sm transition flex items-center justify-center gap-2 disabled:opacity-50"
-              style={{ backgroundColor: "#1a56db" }}
-              onMouseEnter={e => !submitting && (e.target.style.backgroundColor = "#1648c8")}
-              onMouseLeave={e => !submitting && (e.target.style.backgroundColor = "#1a56db")}>
+              className="w-full bg-blue-700 hover:bg-blue-800 disabled:bg-blue-300 text-white font-semibold py-2.5 rounded-lg text-sm transition flex items-center justify-center gap-2">
               {submitting ? "Submitting…" : "Proceed to Payment"}
               {!submitting && (
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -695,7 +730,7 @@ export default function ClubRegistration() {
   );
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#f0f2f5" }}>
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 via-white to-blue-100">
       <Header />
 
       <div className="flex flex-1">
@@ -706,7 +741,7 @@ export default function ClubRegistration() {
           {/* ── STEP 1: Club Details ── */}
           {step === 1 && (
             <div>
-              <h2 className="font-bold text-base mb-1" style={{ color: "#0f1c3f" }}>Club Details</h2>
+              <h2 className="font-bold text-base mb-1 text-gray-900">Club Details</h2>
               <p className="text-xs text-gray-400 mb-4">Enter the basic information about your club.</p>
 
               <div className="bg-white rounded-xl shadow-sm p-5">
@@ -749,12 +784,11 @@ export default function ClubRegistration() {
             <div>
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-1">
                 <div>
-                  <h2 className="font-bold text-base" style={{ color: "#0f1c3f" }}>Coach Details</h2>
+                  <h2 className="font-bold text-base text-gray-900">Coach Details</h2>
                   <p className="text-xs text-gray-400">Add one or more coaches to your club.</p>
                 </div>
                 <button onClick={addCoach}
-                  className="flex items-center justify-center gap-1.5 text-sm font-semibold px-3 py-1.5 rounded-lg border-2 transition flex-shrink-0 self-start sm:self-auto"
-                  style={{ color: "#1a56db", borderColor: "#1a56db" }}>
+                  className="flex items-center justify-center gap-1.5 text-sm font-semibold px-3 py-1.5 rounded-lg border-2 border-blue-700 text-blue-700 hover:bg-blue-50 transition flex-shrink-0 self-start sm:self-auto">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   </svg>
@@ -807,6 +841,26 @@ export default function ClubRegistration() {
                         <Field label="Name with Initials" required>
                           <Input value={coach.nameWithInitials} onChange={e => handleCoachChange(coach.id, "nameWithInitials", e.target.value)} placeholder="N. Perera" />
                         </Field>
+                        <Field label="Email" required>
+                          {idx === 0 ? (
+                            <Input
+                              icon="📧"
+                              type="email"
+                              value={email}
+                              readOnly
+                              title="Verified email (auto-filled from OTP verification)"
+                              style={{ backgroundColor: "#f3f4f6", color: "#6b7280", cursor: "not-allowed" }}
+                            />
+                          ) : (
+                            <Input
+                              icon="📧"
+                              type="email"
+                              value={coach.email}
+                              onChange={e => handleCoachChange(coach.id, "email", e.target.value)}
+                              placeholder="coach@example.com"
+                            />
+                          )}
+                        </Field>
                         <Field label="National ID Number" required>
                           <Input value={coach.nationalId} onChange={e => handleCoachChange(coach.id, "nationalId", e.target.value)} placeholder="812345678V" />
                         </Field>
@@ -831,8 +885,8 @@ export default function ClubRegistration() {
 
                     {idx === 0 && (
                       <div className="mt-3 flex items-center gap-1.5">
-                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: "#e8f0fe", color: "#1a56db" }}>Primary Coach</span>
-                        <span className="text-xs text-gray-400">This coach will be the primary contact.</span>
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">Primary Coach · Verified</span>
+                        <span className="text-xs text-gray-400">Uses your OTP-verified email — already verified.</span>
                       </div>
                     )}
                   </div>
@@ -844,7 +898,7 @@ export default function ClubRegistration() {
           {/* ── STEP 3: Summary (centered in main area) ── */}
           {step === 3 && (
             <div className="max-w-2xl mx-auto">
-              <h2 className="font-bold text-base mb-1 text-center" style={{ color: "#0f1c3f" }}>Registration Summary</h2>
+              <h2 className="font-bold text-base mb-1 text-center text-gray-900">Registration Summary</h2>
               <p className="text-xs text-gray-400 mb-4 text-center">Review your details before proceeding.</p>
               <SummaryPanel />
             </div>
@@ -859,10 +913,7 @@ export default function ClubRegistration() {
             </button>
             {step < 3 && (
               <button onClick={handleNext}
-                className="px-6 py-2.5 text-white rounded-xl text-sm font-semibold transition flex items-center gap-2"
-                style={{ backgroundColor: "#1a56db" }}
-                onMouseEnter={e => e.target.style.backgroundColor = "#1648c8"}
-                onMouseLeave={e => e.target.style.backgroundColor = "#1a56db"}>
+                className="px-6 py-2.5 bg-blue-700 hover:bg-blue-800 text-white rounded-lg text-sm font-semibold transition flex items-center gap-2">
                 {step === 2 ? "Next: Review Summary" : "Next"}
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
@@ -876,12 +927,14 @@ export default function ClubRegistration() {
             On step 3 the summary moves into the centered main area instead. */}
         {step !== 3 && (
           <div className="hidden lg:block w-72 xl:w-80 p-4 pt-6 flex-shrink-0">
-            <p className="font-bold text-sm mb-1" style={{ color: "#0f1c3f" }}>Registration Summary</p>
+            <p className="font-bold text-sm mb-1 text-gray-900">Registration Summary</p>
             <p className="text-xs text-gray-400 mb-4">Review your details before proceeding.</p>
             <SummaryPanel />
           </div>
         )}
       </div>
+
+      <Footer />
     </div>
   );
 }
