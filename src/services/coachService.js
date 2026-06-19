@@ -34,3 +34,17 @@ export const getFacilityAvailability = (facilityId, date) =>
   api
     .get(`/api/facilities/${facilityId}/availability`, { params: { date } })
     .then((r) => (Array.isArray(r.data) ? r.data[0] : r.data));
+
+// GET /api/clubs/{id} → club detail object (the endpoint returns [[ {…} ]],
+// so unwrap the first element).
+export const getClub = (clubId) =>
+  api.get(`/api/clubs/${clubId}`).then((r) => (Array.isArray(r.data) ? r.data[0] : r.data));
+
+// GET /api/payments?club_id=… → array of payments for the club.
+export const getClubPayments = (clubId) =>
+  api.get(`/api/payments`, { params: { club_id: clubId } }).then((r) => r.data);
+
+// GET /api/attendances?date=… → array of attendance scans. The backend has no
+// club filter, so callers narrow to their club members client-side.
+export const getAttendances = (params = {}) =>
+  api.get(`/api/attendances`, { params }).then((r) => r.data);

@@ -2,7 +2,10 @@ import React, { useState } from "react";
 import logo from "../../assets/usjp-logo__1_-removebg-preview.png";
 import { sendOtp } from "../../services/authService";
 import toast from "react-hot-toast";
-export default function EmailStep({ onSend }) {
+// `beforeSend` (optional): async (email) => boolean. Runs before the OTP is
+// sent; return false to abort (e.g. the email isn't registered). The login page
+// uses it to block unregistered emails and prompt them to register instead.
+export default function EmailStep({ onSend, beforeSend }) {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -16,6 +19,10 @@ export default function EmailStep({ onSend }) {
     setError("");
     setLoading(true);
     try {
+      if (beforeSend) {
+        const proceed = await beforeSend(email);
+        if (!proceed) return; // aborted (caller shows its own message)
+      }
       await sendOtp(email);
       toast.success("OTP sent successfully!");
       onSend(email);

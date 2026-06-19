@@ -9,17 +9,45 @@ import {
   getClubMembers,
   getFacilities,
   getFacilityAvailability,
+  getClub,
+  getClubPayments,
+  getAttendances,
 } from "../../services/coachService";
+import { getMember } from "../../services/memberService";
+import { storageUrl } from "../../services/api";
 
-// ── Design tokens (shared across the app) ──
-const NAVY = "#0f1c3f";
-const BLUE = "#1a56db";
-const BLUE_HOVER = "#1648c8";
-const GOLD = "#e8a020";
-const LIGHT = "#e8f0fe";
+// ── Design tokens — aligned with the OTP LoginPage palette ──
+// (clean blue gradient background, white rounded-2xl cards, blue-700 accents).
+const PRIMARY = "#1d4ed8"; // blue-700, matches LoginPage text/accent
+const PRIMARY_DARK = "#1e3a8a"; // blue-900, sidebar gradient top
+const NAVY = "#0f1c3f"; // headings
+const LIGHT = "#e8f0fe"; // icon chip bg
 const STORAGE_KEY = "sfmis_coach";
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
+
+// Backend never returns a single "fullname" — it returns the name parts. Build a
+// readable display name from initials (or the denoted name) + lastname.
+const buildName = (initials, denoted, lastname) => {
+  const lead = String(initials || denoted || "").trim();
+  const tail = String(lastname || "").trim();
+  return [lead, tail].filter(Boolean).join(" ") || "Unknown";
+};
+
+const fmtDate = (v) => {
+  if (!v) return "—";
+  const s = String(v);
+  return s.length >= 10 ? s.slice(0, 10) : s;
+};
+
+const fmtDateTime = (v) => {
+  if (!v) return "—";
+  const s = String(v).replace("T", " ");
+  return s.length >= 16 ? s.slice(0, 16) : s;
+};
+
+const money = (v) =>
+  v == null || v === "" ? "—" : `LKR ${Number(v).toLocaleString("en-LK", { minimumFractionDigits: 2 })}`;
 
 const Icon = ({ path, className = "w-5 h-5", stroke = "currentColor", width = 1.8 }) => (
   <svg className={className} fill="none" viewBox="0 0 24 24" stroke={stroke}>
@@ -30,34 +58,43 @@ const Icon = ({ path, className = "w-5 h-5", stroke = "currentColor", width = 1.
 );
 
 const ICONS = {
-  dashboard: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6",
-  approvals: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z",
+  club: "M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0H5m14 0h2M5 21H3m4-14h.01M11 7h.01M15 7h.01M7 11h.01M11 11h.01M15 11h.01M7 15h.01M11 15h.01M15 15h.01",
+  requests: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z",
   members: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z",
-  book: "M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z",
-  profile: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z",
+  bookings: "M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z",
+  attendance: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7l2 2 4-4",
+  payments: "M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z",
   logout: "M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1",
   clock: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z",
-  building: "M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0H5m14 0h2M5 21H3m4-14h.01M11 7h.01M15 7h.01M7 11h.01M11 11h.01M15 11h.01",
   check: "M5 13l4 4L19 7",
   x: "M6 18L18 6M6 6l12 12",
-  card: "M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z",
   bell: "M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9",
 };
 
 const NAV = [
-  { key: "dashboard", label: "Dashboard" },
-  { key: "approvals", label: "Approvals" },
-  { key: "members", label: "Club Members" },
-  { key: "book", label: "Book Facility" },
-  { key: "profile", label: "Profile" },
+  { key: "club", label: "My Club", icon: ICONS.club },
+  { key: "requests", label: "Student Requests", icon: ICONS.requests },
+  { key: "members", label: "Members", icon: ICONS.members },
+  { key: "bookings", label: "Bookings", icon: ICONS.bookings },
+  { key: "attendance", label: "Attendance", icon: ICONS.attendance },
+  { key: "payments", label: "Payments", icon: ICONS.payments },
 ];
 
-// Small status-pill helper.
+const VIEW_TITLES = {
+  club: "My Club",
+  requests: "Student Requests",
+  members: "Members",
+  bookings: "Bookings",
+  attendance: "Attendance",
+  payments: "Payments",
+};
+
 const statusColor = (status) => {
   const s = String(status || "").toLowerCase();
-  if (s.includes("active") || s.includes("paid") || s.includes("issued") || s.includes("approved")) return { bg: "#dcfce7", color: "#15803d" };
-  if (s.includes("pending")) return { bg: "#fef3c7", color: "#b45309" };
-  if (s.includes("reject") || s.includes("fail")) return { bg: "#fee2e2", color: "#b91c1c" };
+  if (s.includes("active") || s.includes("paid") || s.includes("issued") || s.includes("approved") || s.includes("complete"))
+    return { bg: "#dcfce7", color: "#15803d" };
+  if (s.includes("pending") || s.includes("await")) return { bg: "#fef3c7", color: "#b45309" };
+  if (s.includes("reject") || s.includes("fail") || s.includes("refund")) return { bg: "#fee2e2", color: "#b91c1c" };
   return { bg: "#e5e7eb", color: "#4b5563" };
 };
 
@@ -80,7 +117,9 @@ const Avatar = ({ name, url, size = 40 }) => {
   return url ? (
     <img src={url} alt={name} className="rounded-full object-cover flex-shrink-0" style={{ width: size, height: size }} />
   ) : (
-    <div className="rounded-full flex items-center justify-center flex-shrink-0 font-bold text-white" style={{ width: size, height: size, backgroundColor: BLUE, fontSize: size * 0.36 }}>
+    <div
+      className="rounded-full flex items-center justify-center flex-shrink-0 font-bold text-white"
+      style={{ width: size, height: size, backgroundColor: PRIMARY, fontSize: size * 0.36 }}>
       {initials}
     </div>
   );
@@ -92,7 +131,7 @@ export default function CoachDashboard() {
 
   // Resolve the logged-in coach from navigation state (set by LoginPage) or the
   // session fallback so a refresh keeps us signed in.
-  const [coach] = useState(() => {
+  const [coach, setCoach] = useState(() => {
     const fromState = location.state?.member;
     if (fromState) {
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify(fromState));
@@ -105,24 +144,55 @@ export default function CoachDashboard() {
     }
   });
 
-  const [active, setActive] = useState("dashboard");
+  const coachName = coach ? buildName(coach.initials, coach.name_denoted_by_initials, coach.lastname) : "";
+
+  const [active, setActive] = useState("club");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  const [club, setClub] = useState(null);
   const [requests, setRequests] = useState([]);
   const [members, setMembers] = useState([]);
   const [facilities, setFacilities] = useState([]);
+  const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actingId, setActingId] = useState(null);
 
-  // Book Facility state
+  // Bookings (facility availability) state
   const [selectedFacilityId, setSelectedFacilityId] = useState(null);
   const [bookDate, setBookDate] = useState(todayStr());
   const [availability, setAvailability] = useState(null);
   const [availLoading, setAvailLoading] = useState(false);
 
+  // Attendance state
+  const [attendances, setAttendances] = useState([]);
+  const [attDate, setAttDate] = useState("");
+  const [attLoading, setAttLoading] = useState(false);
+
   useEffect(() => {
     if (!coach) navigate("/login", { replace: true });
   }, [coach, navigate]);
+
+  // The /verify-otp payload omits the photo (and some profile fields), so the
+  // coach's own avatar would be blank. Enrich it once from the full member
+  // record, which includes photo_path.
+  useEffect(() => {
+    if (!coach?.id || coach.photo_path) return;
+    let on = true;
+    getMember(coach.id)
+      .then((full) => {
+        if (on && full) {
+          setCoach((prev) => {
+            const merged = { ...prev, ...full };
+            sessionStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+            return merged;
+          });
+        }
+      })
+      .catch(() => {});
+    return () => {
+      on = false;
+    };
+  }, [coach?.id, coach?.photo_path]);
 
   const refreshRequests = useCallback(async () => {
     if (!coach?.id || !coach?.club_id) {
@@ -148,32 +218,37 @@ export default function CoachDashboard() {
     }
   }, [coach]);
 
+  // Initial load — club, requests, members, facilities, payments in parallel.
   useEffect(() => {
     if (!coach) return;
-    let active = true;
+    let on = true;
     (async () => {
       setLoading(true);
-      const [reqs, mems, facs] = await Promise.allSettled([
+      const [clb, reqs, mems, facs, pays] = await Promise.allSettled([
+        coach.club_id ? getClub(coach.club_id) : Promise.resolve(null),
         coach.club_id ? getClubVerificationRequests(coach.id) : Promise.resolve([]),
         coach.club_id ? getClubMembers(coach.club_id) : Promise.resolve([]),
         getFacilities(),
+        coach.club_id ? getClubPayments(coach.club_id) : Promise.resolve([]),
       ]);
-      if (!active) return;
+      if (!on) return;
+      setClub(clb.status === "fulfilled" ? clb.value : null);
       setRequests(reqs.status === "fulfilled" ? reqs.value : []);
       setMembers(mems.status === "fulfilled" ? mems.value : []);
       const facList = facs.status === "fulfilled" ? facs.value : [];
       setFacilities(facList);
       if (facList.length) setSelectedFacilityId((id) => id ?? facList[0].id);
+      setPayments(pays.status === "fulfilled" ? pays.value : []);
       setLoading(false);
     })();
     return () => {
-      active = false;
+      on = false;
     };
   }, [coach]);
 
-  // Load availability whenever the Book Facility tab is open with a selection.
+  // Load facility availability when the Bookings tab is open with a selection.
   useEffect(() => {
-    if (active !== "book" || !selectedFacilityId) return;
+    if (active !== "bookings" || !selectedFacilityId) return;
     let on = true;
     setAvailLoading(true);
     getFacilityAvailability(selectedFacilityId, bookDate)
@@ -189,6 +264,25 @@ export default function CoachDashboard() {
       on = false;
     };
   }, [active, selectedFacilityId, bookDate]);
+
+  // Load attendance when the Attendance tab is open (optionally filtered by date).
+  useEffect(() => {
+    if (active !== "attendance") return;
+    let on = true;
+    setAttLoading(true);
+    getAttendances(attDate ? { date: attDate } : {})
+      .then((data) => on && setAttendances(Array.isArray(data) ? data : []))
+      .catch(() => {
+        if (on) {
+          setAttendances([]);
+          toast.error("Could not load attendance.");
+        }
+      })
+      .finally(() => on && setAttLoading(false));
+    return () => {
+      on = false;
+    };
+  }, [active, attDate]);
 
   const handleApprove = async (memberId) => {
     setActingId(memberId);
@@ -221,26 +315,30 @@ export default function CoachDashboard() {
     navigate("/login", { replace: true });
   };
 
+  // Narrow global attendance feed to this coach's club members.
+  const clubMemberIds = useMemo(() => new Set(members.map((m) => m.id)), [members]);
+  const clubAttendances = useMemo(
+    () => (clubMemberIds.size ? attendances.filter((a) => clubMemberIds.has(a.member_id)) : attendances),
+    [attendances, clubMemberIds]
+  );
+
   const stats = useMemo(
     () => [
-      { label: "Club Members", value: members.length, icon: ICONS.members, accent: BLUE },
-      { label: "Pending Approvals", value: requests.length, icon: ICONS.approvals, accent: GOLD },
-      { label: "Facilities", value: facilities.length, icon: ICONS.book, accent: "#0891b2" },
-      { label: "Membership", value: coach?.member_status || "—", icon: ICONS.check, accent: "#16a34a", isText: true },
+      { label: "Club Members", value: members.length, icon: ICONS.members, accent: PRIMARY },
+      { label: "Pending Requests", value: requests.length, icon: ICONS.requests, accent: "#d97706" },
+      { label: "Payments", value: payments.length, icon: ICONS.payments, accent: "#0891b2" },
+      { label: "Facilities", value: facilities.length, icon: ICONS.bookings, accent: "#16a34a" },
     ],
-    [members.length, requests.length, facilities.length, coach]
+    [members.length, requests.length, payments.length, facilities.length]
   );
 
   if (!coach) return null;
 
   const selectedFacility = facilities.find((f) => f.id === selectedFacilityId);
 
-  // ════════════════════════════════════════════
-  // VIEWS
-  // ════════════════════════════════════════════
-  const DashboardView = () => (
+  // ════════════════════════════════════════════ VIEWS ════════════════════════
+  const MyClubView = () => (
     <>
-      {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {stats.map((s, i) => (
           <div key={i} className="bg-white rounded-2xl p-5 shadow-sm flex items-center gap-4">
@@ -248,102 +346,117 @@ export default function CoachDashboard() {
               <Icon path={s.icon} className="w-6 h-6" stroke={s.accent} width={2} />
             </div>
             <div className="min-w-0">
-              <p className={`font-extrabold truncate ${s.isText ? "text-base" : "text-2xl"}`} style={{ color: NAVY }}>{s.value}</p>
+              <p className="font-extrabold truncate text-2xl" style={{ color: NAVY }}>{s.value}</p>
               <p className="text-xs text-gray-400">{s.label}</p>
             </div>
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Pending approvals preview */}
-        <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-sm" style={{ color: NAVY }}>Pending Club Verifications</h3>
-            {requests.length > 0 && (
-              <button onClick={() => setActive("approvals")} className="text-xs font-semibold" style={{ color: BLUE }}>View all</button>
+      {!coach.club_id ? (
+        <div className="bg-white rounded-2xl shadow-sm p-5">
+          <EmptyState icon={ICONS.club} text="You are not linked to a club yet." />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Club details */}
+          <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm p-6">
+            <div className="flex items-center gap-4 mb-5">
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${PRIMARY_DARK}, ${PRIMARY})` }}>
+                <Icon path={ICONS.club} className="w-7 h-7" stroke="#fff" width={1.8} />
+              </div>
+              <div className="min-w-0">
+                <h3 className="font-bold text-lg truncate" style={{ color: NAVY }}>{club?.club_name || coach.club_name || "—"}</h3>
+                <p className="text-sm text-gray-400">{club?.club_id || coach.club_code || "—"}</p>
+              </div>
+              <div className="ml-auto"><Pill>{club?.club_status}</Pill></div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-6">
+              <InfoRow label="Registration No" value={club?.reg_no} />
+              <InfoRow label="Registration Year" value={club?.reg_year} />
+              <InfoRow label="Primary Phone" value={club?.primary_phone_number} />
+              <InfoRow label="Secondary Phone" value={club?.secondary_phone_number} />
+              <InfoRow label="Membership Start" value={fmtDate(club?.membership_start_date)} />
+              <InfoRow label="Membership End" value={fmtDate(club?.membership_end_date)} />
+              <InfoRow label="No. of Coaches" value={club?.no_of_coaches} />
+              <InfoRow label="Approved Members" value={club?.approved_member_count} />
+              <InfoRow label="Pending Requests" value={club?.pending_member_request_count} />
+              <InfoRow label="Address" value={club?.address} />
+            </div>
+          </div>
+
+          {/* Recent members */}
+          <div className="bg-white rounded-2xl shadow-sm p-5">
+            <h3 className="font-bold text-sm mb-4" style={{ color: NAVY }}>Recent Members</h3>
+            {!club?.recent_members?.length ? (
+              <EmptyState icon={ICONS.members} text="No members yet." />
+            ) : (
+              <div className="space-y-3">
+                {club.recent_members.slice(0, 6).map((m) => (
+                  <div key={m.id} className="flex items-center gap-3 py-1.5 border-b border-gray-50 last:border-0">
+                    <Avatar name={buildName(m.initials, m.name_denoted_by_initials, m.lastname)} url={storageUrl(m.photo_path) || m.photo_url} size={36} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold truncate" style={{ color: NAVY }}>
+                        {buildName(m.initials, m.name_denoted_by_initials, m.lastname)}
+                      </p>
+                      <p className="text-xs text-gray-400 truncate">{m.member_id}</p>
+                    </div>
+                    <Pill>{m.member_status}</Pill>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
-          {requests.length === 0 ? (
-            <EmptyState icon={ICONS.check} text="No pending verification requests." />
-          ) : (
-            <div className="space-y-3">
-              {requests.slice(0, 4).map((r) => (
-                <div key={r.id} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
-                  <Avatar name={r.fullname} url={r.photo_url} size={38} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate" style={{ color: NAVY }}>{r.fullname}</p>
-                    <p className="text-xs text-gray-400 truncate">{r.member_id} · {r.email}</p>
-                  </div>
-                  <Pill>{r.member_status}</Pill>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
-
-        {/* Club info */}
-        <div className="bg-white rounded-2xl shadow-sm p-5">
-          <h3 className="font-bold text-sm mb-4" style={{ color: NAVY }}>Your Club</h3>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: NAVY }}>
-              <Icon path={ICONS.building} className="w-6 h-6" stroke="#fff" width={1.8} />
-            </div>
-            <div className="min-w-0">
-              <p className="font-bold text-sm truncate" style={{ color: NAVY }}>{coach.club_name || "Not linked to a club"}</p>
-              <p className="text-xs text-gray-400">{coach.club_code || "—"}</p>
-            </div>
-          </div>
-          <InfoRow label="Coach" value={coach.fullname} />
-          <InfoRow label="Member ID" value={coach.member_id} />
-          <InfoRow label="Payment" value={<Pill>{coach.payment_status}</Pill>} />
-        </div>
-      </div>
+      )}
     </>
   );
 
-  const ApprovalsView = () => (
+  const RequestsView = () => (
     <div className="bg-white rounded-2xl shadow-sm p-5">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-bold text-sm" style={{ color: NAVY }}>Club Verification Requests ({requests.length})</h3>
-        <button onClick={refreshRequests} className="text-xs font-semibold" style={{ color: BLUE }}>Refresh</button>
+        <button onClick={refreshRequests} className="text-xs font-semibold" style={{ color: PRIMARY }}>Refresh</button>
       </div>
       {!coach.club_id ? (
-        <EmptyState icon={ICONS.building} text="You are not linked to a club yet." />
+        <EmptyState icon={ICONS.club} text="You are not linked to a club yet." />
       ) : requests.length === 0 ? (
         <EmptyState icon={ICONS.check} text="No students are waiting for verification." />
       ) : (
         <div className="space-y-3">
-          {requests.map((r) => (
-            <div key={r.id} className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 rounded-xl border border-gray-100">
-              <Avatar name={r.fullname} url={r.photo_url} size={44} />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold" style={{ color: NAVY }}>{r.fullname}</p>
-                <p className="text-xs text-gray-400 break-words">
-                  {r.member_id} · {r.email}{r.nic_number ? ` · NIC ${r.nic_number}` : ""}
-                </p>
-                <p className="text-xs text-gray-400">Requested: {r.requested_club_name || coach.club_name}</p>
+          {requests.map((r) => {
+            const name = buildName(r.initials, r.name_denoted_by_initials, r.lastname);
+            return (
+              <div key={r.id} className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 rounded-xl border border-gray-100">
+                <Avatar name={name} url={storageUrl(r.photo_path) || r.photo_url} size={44} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold" style={{ color: NAVY }}>{name}</p>
+                  <p className="text-xs text-gray-400 break-words">
+                    {r.member_id} · {r.email}{r.nic_number ? ` · NIC ${r.nic_number}` : ""}
+                  </p>
+                  <p className="text-xs text-gray-400">Requested: {r.requested_club_name || coach.club_name}</p>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <button
+                    onClick={() => handleApprove(r.id)}
+                    disabled={actingId === r.id}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-white disabled:opacity-50"
+                    style={{ backgroundColor: "#16a34a" }}>
+                    <Icon path={ICONS.check} className="w-4 h-4" stroke="#fff" width={2.5} />
+                    Approve
+                  </button>
+                  <button
+                    onClick={() => handleReject(r.id)}
+                    disabled={actingId === r.id}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold disabled:opacity-50"
+                    style={{ backgroundColor: "#fee2e2", color: "#b91c1c" }}>
+                    <Icon path={ICONS.x} className="w-4 h-4" stroke="#b91c1c" width={2.5} />
+                    Reject
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <button
-                  onClick={() => handleApprove(r.id)}
-                  disabled={actingId === r.id}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-white disabled:opacity-50"
-                  style={{ backgroundColor: "#16a34a" }}>
-                  <Icon path={ICONS.check} className="w-4 h-4" stroke="#fff" width={2.5} />
-                  Approve
-                </button>
-                <button
-                  onClick={() => handleReject(r.id)}
-                  disabled={actingId === r.id}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold disabled:opacity-50"
-                  style={{ backgroundColor: "#fee2e2", color: "#b91c1c" }}>
-                  <Icon path={ICONS.x} className="w-4 h-4" stroke="#b91c1c" width={2.5} />
-                  Reject
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -353,7 +466,7 @@ export default function CoachDashboard() {
     <div className="bg-white rounded-2xl shadow-sm p-5">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-bold text-sm" style={{ color: NAVY }}>Club Members ({members.length})</h3>
-        <button onClick={refreshMembers} className="text-xs font-semibold" style={{ color: BLUE }}>Refresh</button>
+        <button onClick={refreshMembers} className="text-xs font-semibold" style={{ color: PRIMARY }}>Refresh</button>
       </div>
       {members.length === 0 ? (
         <EmptyState icon={ICONS.members} text="No members in your club yet." />
@@ -370,23 +483,26 @@ export default function CoachDashboard() {
               </tr>
             </thead>
             <tbody>
-              {members.map((m) => (
-                <tr key={m.id} className="border-b border-gray-50 last:border-0">
-                  <td className="py-3 pr-3">
-                    <div className="flex items-center gap-3">
-                      <Avatar name={m.fullname} url={m.photo_url} size={36} />
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold truncate" style={{ color: NAVY }}>{m.fullname}</p>
-                        <p className="text-xs text-gray-400 truncate">{m.email}</p>
+              {members.map((m) => {
+                const name = buildName(m.initials, m.name_denoted_by_initials, m.lastname);
+                return (
+                  <tr key={m.id} className="border-b border-gray-50 last:border-0">
+                    <td className="py-3 pr-3">
+                      <div className="flex items-center gap-3">
+                        <Avatar name={name} url={storageUrl(m.photo_path) || m.photo_url} size={36} />
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold truncate" style={{ color: NAVY }}>{name}</p>
+                          <p className="text-xs text-gray-400 truncate">{m.email}</p>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="py-3 px-3 text-xs text-gray-600">{m.member_id}</td>
-                  <td className="py-3 px-3 text-xs text-gray-600">{m.member_type}</td>
-                  <td className="py-3 px-3"><Pill>{m.member_status}</Pill></td>
-                  <td className="py-3 pl-3"><Pill>{m.payment_status}</Pill></td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="py-3 px-3 text-xs text-gray-600">{m.member_id}</td>
+                    <td className="py-3 px-3 text-xs text-gray-600">{m.member_type}</td>
+                    <td className="py-3 px-3"><Pill>{m.member_status}</Pill></td>
+                    <td className="py-3 pl-3"><Pill>{m.payment_status}</Pill></td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -394,13 +510,12 @@ export default function CoachDashboard() {
     </div>
   );
 
-  const BookFacilityView = () => {
+  const BookingsView = () => {
     const timeCols = availability?.slots?.[0]?.time_slots || [];
     return (
       <div className="bg-white rounded-2xl shadow-sm p-5">
-        <h3 className="font-bold text-sm mb-4" style={{ color: NAVY }}>Book a Facility</h3>
+        <h3 className="font-bold text-sm mb-4" style={{ color: NAVY }}>Facility Availability</h3>
 
-        {/* Controls */}
         <div className="flex flex-col sm:flex-row gap-3 mb-5">
           <select
             value={selectedFacilityId || ""}
@@ -420,7 +535,6 @@ export default function CoachDashboard() {
           />
         </div>
 
-        {/* Legend */}
         <div className="flex flex-wrap gap-4 mb-4 text-xs text-gray-500">
           <LegendDot color="#dcfce7" border="#16a34a" label="Available" />
           <LegendDot color="#fee2e2" border="#ef4444" label="Full" />
@@ -430,7 +544,7 @@ export default function CoachDashboard() {
         {availLoading ? (
           <p className="text-sm text-gray-400 py-10 text-center">Loading availability…</p>
         ) : !availability ? (
-          <EmptyState icon={ICONS.book} text="Select a facility and date to see availability." />
+          <EmptyState icon={ICONS.bookings} text="Select a facility and date to see availability." />
         ) : !availability.facility_available_for_booking ? (
           <EmptyState icon={ICONS.clock} text="This facility is currently not available for booking." />
         ) : timeCols.length === 0 ? (
@@ -493,78 +607,161 @@ export default function CoachDashboard() {
     );
   };
 
-  const ProfileView = () => (
-    <div className="bg-white rounded-2xl shadow-sm p-6 max-w-2xl">
-      <div className="flex items-center gap-4 mb-6">
-        <Avatar name={coach.fullname} url={coach.photo_url} size={64} />
-        <div>
-          <h3 className="font-bold text-lg" style={{ color: NAVY }}>{coach.fullname}</h3>
-          <p className="text-sm text-gray-400">Coach · {coach.club_name || "No club"}</p>
+  const AttendanceView = () => (
+    <div className="bg-white rounded-2xl shadow-sm p-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+        <h3 className="font-bold text-sm" style={{ color: NAVY }}>Attendance ({clubAttendances.length})</h3>
+        <div className="flex items-center gap-2">
+          <input
+            type="date"
+            value={attDate}
+            onChange={(e) => setAttDate(e.target.value)}
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+          />
+          {attDate && (
+            <button onClick={() => setAttDate("")} className="text-xs font-semibold" style={{ color: PRIMARY }}>Clear</button>
+          )}
         </div>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-6">
-        <InfoRow label="Member ID" value={coach.member_id} />
-        <InfoRow label="Email" value={coach.email} />
-        <InfoRow label="Club" value={coach.club_name || "—"} />
-        <InfoRow label="Club Code" value={coach.club_code || "—"} />
-        <InfoRow label="Membership Status" value={<Pill>{coach.member_status}</Pill>} />
-        <InfoRow label="Payment Status" value={<Pill>{coach.payment_status}</Pill>} />
-      </div>
+      {attLoading ? (
+        <p className="text-sm text-gray-400 py-10 text-center">Loading attendance…</p>
+      ) : clubAttendances.length === 0 ? (
+        <EmptyState icon={ICONS.attendance} text="No attendance records for your club members." />
+      ) : (
+        <div className="overflow-x-auto -mx-5 px-5">
+          <table className="w-full text-left min-w-[680px]">
+            <thead>
+              <tr className="text-xs text-gray-400 border-b border-gray-100">
+                <th className="py-2 pr-3 font-medium">Member</th>
+                <th className="py-2 px-3 font-medium">Member ID</th>
+                <th className="py-2 px-3 font-medium">Scanned At</th>
+                <th className="py-2 px-3 font-medium">Booking Date</th>
+                <th className="py-2 pl-3 font-medium">Code</th>
+              </tr>
+            </thead>
+            <tbody>
+              {clubAttendances.map((a) => {
+                const name = buildName(a.member_initials, a.member_name_denoted_by_initials, a.member_lastname);
+                return (
+                  <tr key={a.id} className="border-b border-gray-50 last:border-0">
+                    <td className="py-3 pr-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold truncate" style={{ color: NAVY }}>{name}</p>
+                        <p className="text-xs text-gray-400 truncate">{a.member_email || "—"}</p>
+                      </div>
+                    </td>
+                    <td className="py-3 px-3 text-xs text-gray-600">{a.member_code || "—"}</td>
+                    <td className="py-3 px-3 text-xs text-gray-600">{fmtDateTime(a.scanned_at)}</td>
+                    <td className="py-3 px-3 text-xs text-gray-600">{fmtDate(a.booking_date)}</td>
+                    <td className="py-3 pl-3 text-xs text-gray-600 font-mono">{a.scanned_code || "—"}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <p className="text-xs text-gray-400 mt-4">Showing attendance scans for members of your club.</p>
     </div>
   );
 
-  const VIEW_TITLES = { dashboard: "Dashboard", approvals: "Approvals", members: "Club Members", book: "Book Facility", profile: "Profile" };
+  const PaymentsView = () => (
+    <div className="bg-white rounded-2xl shadow-sm p-5">
+      <h3 className="font-bold text-sm mb-4" style={{ color: NAVY }}>Club Payments ({payments.length})</h3>
+      {!coach.club_id ? (
+        <EmptyState icon={ICONS.club} text="You are not linked to a club yet." />
+      ) : payments.length === 0 ? (
+        <EmptyState icon={ICONS.payments} text="No payments recorded for your club." />
+      ) : (
+        <div className="overflow-x-auto -mx-5 px-5">
+          <table className="w-full text-left min-w-[760px]">
+            <thead>
+              <tr className="text-xs text-gray-400 border-b border-gray-100">
+                <th className="py-2 pr-3 font-medium">Reference</th>
+                <th className="py-2 px-3 font-medium">Payer</th>
+                <th className="py-2 px-3 font-medium">Type</th>
+                <th className="py-2 px-3 font-medium">Amount</th>
+                <th className="py-2 px-3 font-medium">Status</th>
+                <th className="py-2 pl-3 font-medium">Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {payments.map((p) => {
+                const payer = p.payer_id
+                  ? buildName(p.payer_initials, p.payer_name_denoted_by_initials, p.payer_lastname)
+                  : p.club_name || "Club";
+                return (
+                  <tr key={p.id} className="border-b border-gray-50 last:border-0">
+                    <td className="py-3 pr-3 text-xs font-mono text-gray-600">{p.payment_reference || "—"}</td>
+                    <td className="py-3 px-3">
+                      <p className="text-sm font-semibold truncate" style={{ color: NAVY }}>{payer}</p>
+                      <p className="text-xs text-gray-400 truncate">{p.payer_code || p.club_code || "—"}</p>
+                    </td>
+                    <td className="py-3 px-3 text-xs text-gray-600">{p.payment_type || "—"}</td>
+                    <td className="py-3 px-3 text-xs font-semibold text-gray-700 whitespace-nowrap">{money(p.amount)}</td>
+                    <td className="py-3 px-3"><Pill>{p.payment_status}</Pill></td>
+                    <td className="py-3 pl-3 text-xs text-gray-600">{fmtDate(p.paid_at || p.created_at)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
 
   const renderView = () => {
     if (loading) return <p className="text-sm text-gray-400 py-20 text-center">Loading dashboard…</p>;
     switch (active) {
-      case "approvals": return <ApprovalsView />;
+      case "requests": return <RequestsView />;
       case "members": return <MembersView />;
-      case "book": return <BookFacilityView />;
-      case "profile": return <ProfileView />;
-      default: return <DashboardView />;
+      case "bookings": return <BookingsView />;
+      case "attendance": return <AttendanceView />;
+      case "payments": return <PaymentsView />;
+      default: return <MyClubView />;
     }
   };
 
   return (
-    <div className="min-h-screen flex" style={{ backgroundColor: "#f0f2f5", fontFamily: "Inter, system-ui, sans-serif" }}>
+    <div className="min-h-screen flex overflow-x-hidden bg-gradient-to-br from-blue-50 via-white to-blue-100" style={{ fontFamily: "Inter, system-ui, sans-serif" }}>
       {/* ══ SIDEBAR ══ */}
       <aside
         className={`fixed lg:static z-40 inset-y-0 left-0 w-64 flex flex-col transition-transform ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
-        style={{ backgroundColor: NAVY }}>
+        style={{ background: `linear-gradient(180deg, ${PRIMARY_DARK} 0%, ${PRIMARY} 100%)` }}>
         <div className="flex items-center gap-3 px-5 h-16 border-b border-white/10">
-          <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ backgroundColor: GOLD }}>
+          <div className="w-9 h-9 rounded-full flex items-center justify-center bg-white">
             <img src={logo} alt="USJ" className="w-7 h-7 object-contain" />
           </div>
           <div className="leading-tight">
             <p className="text-white font-bold text-sm">USJ SPORTS</p>
-            <p className="text-[10px]" style={{ color: GOLD }}>Coach Portal</p>
+            <p className="text-[10px] text-blue-200">Coach Portal</p>
           </div>
         </div>
 
         {/* Coach card */}
         <div className="flex items-center gap-3 px-5 py-4 border-b border-white/10">
-          <Avatar name={coach.fullname} url={coach.photo_url} size={40} />
+          <Avatar name={coachName} url={storageUrl(coach.photo_path) || coach.photo_url} size={40} />
           <div className="min-w-0">
-            <p className="text-white text-sm font-semibold truncate">{coach.fullname}</p>
-            <p className="text-[11px] truncate" style={{ color: "rgba(255,255,255,0.6)" }}>{coach.club_name || "Coach"}</p>
+            <p className="text-white text-sm font-semibold truncate">{coachName}</p>
+            <p className="text-[11px] truncate text-blue-200">{coach.club_name || "Coach"}</p>
           </div>
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {NAV.map((n) => {
             const on = active === n.key;
-            const badge = n.key === "approvals" && requests.length > 0 ? requests.length : null;
+            const badge = n.key === "requests" && requests.length > 0 ? requests.length : null;
             return (
               <button
                 key={n.key}
                 onClick={() => { setActive(n.key); setSidebarOpen(false); }}
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
-                style={{ backgroundColor: on ? BLUE : "transparent", color: on ? "#fff" : "rgba(255,255,255,0.7)" }}>
-                <Icon path={ICONS[n.key]} className="w-5 h-5" width={1.8} />
+                style={{ backgroundColor: on ? "rgba(255,255,255,0.18)" : "transparent", color: on ? "#fff" : "rgba(255,255,255,0.75)" }}>
+                <Icon path={n.icon} className="w-5 h-5" width={1.8} />
                 <span className="flex-1 text-left">{n.label}</span>
                 {badge && (
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: GOLD, color: "#3b2a00" }}>{badge}</span>
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-white text-blue-700">{badge}</span>
                 )}
               </button>
             );
@@ -572,7 +769,7 @@ export default function CoachDashboard() {
         </nav>
 
         <div className="px-3 py-4 border-t border-white/10">
-          <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors" style={{ color: "rgba(255,255,255,0.7)" }}>
+          <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-blue-100 hover:bg-white/10">
             <Icon path={ICONS.logout} className="w-5 h-5" width={1.8} />
             Logout
           </button>
@@ -584,15 +781,14 @@ export default function CoachDashboard() {
 
       {/* ══ MAIN ══ */}
       <div className="flex-1 min-w-0 flex flex-col">
-        {/* Top bar */}
-        <header className="bg-white h-16 flex items-center justify-between px-4 sm:px-6 shadow-sm sticky top-0 z-20">
+        <header className="bg-white/80 backdrop-blur h-16 flex items-center justify-between px-4 sm:px-6 shadow-sm sticky top-0 z-20">
           <div className="flex items-center gap-3 min-w-0">
             <button className="lg:hidden text-gray-600" onClick={() => setSidebarOpen(true)} aria-label="Open menu">
               <Icon path="M4 6h16M4 12h16M4 18h16" stroke={NAVY} width={2} />
             </button>
             <div className="min-w-0">
               <h1 className="font-bold text-base sm:text-lg truncate" style={{ color: NAVY }}>{VIEW_TITLES[active]}</h1>
-              <p className="text-xs text-gray-400 truncate">Welcome back, {coach.fullname}</p>
+              <p className="text-xs text-gray-400 truncate">Welcome back, {coachName}</p>
             </div>
           </div>
           <div className="flex items-center gap-3 flex-shrink-0">
@@ -600,7 +796,7 @@ export default function CoachDashboard() {
               <Icon path={ICONS.bell} className="w-5 h-5" stroke="#6b7280" width={1.8} />
               {requests.length > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-bold text-white flex items-center justify-center" style={{ backgroundColor: "#ef4444" }}>{requests.length}</span>}
             </button>
-            <Avatar name={coach.fullname} url={coach.photo_url} size={36} />
+            <Avatar name={coachName} url={storageUrl(coach.photo_path) || coach.photo_url} size={36} />
           </div>
         </header>
 
@@ -615,7 +811,7 @@ function InfoRow({ label, value }) {
   return (
     <div className="flex items-center justify-between py-1.5 border-b border-gray-50 last:border-0 gap-3">
       <span className="text-xs text-gray-400 flex-shrink-0">{label}</span>
-      <span className="text-xs font-medium text-gray-700 text-right break-words">{value || "—"}</span>
+      <span className="text-xs font-medium text-gray-700 text-right break-words">{value === 0 ? 0 : value || "—"}</span>
     </div>
   );
 }
@@ -624,7 +820,7 @@ function EmptyState({ icon, text }) {
   return (
     <div className="flex flex-col items-center justify-center py-12 text-center">
       <div className="w-14 h-14 rounded-full flex items-center justify-center mb-3" style={{ backgroundColor: LIGHT }}>
-        <Icon path={icon} className="w-7 h-7" stroke={BLUE} width={1.6} />
+        <Icon path={icon} className="w-7 h-7" stroke={PRIMARY} width={1.6} />
       </div>
       <p className="text-sm text-gray-400">{text}</p>
     </div>

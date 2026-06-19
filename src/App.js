@@ -6,6 +6,7 @@ import LoginPage from "./pages/auth/LoginPage";
 import SelectRegistration from "./pages/auth/SelectRegistration";
 import StudentRegistration from "./pages/auth/StudentRegistration";
 import ClubRegistration from "./pages/auth/ClubRegistration";
+import RegistrationStatus from "./pages/auth/RegistrationStatus";
 import CoachDashboard from "./pages/coach/CoachDashboard";
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
         <Route path="/select-registration" element={<SelectRegistration />} />
         <Route path="/student-registration" element={<StudentRegistration />} />
         <Route path="/club-registration" element={<ClubRegistration />} />
+        <Route path="/registration-status" element={<RegistrationStatus />} />
         <Route path="/coach-dashboard" element={<CoachDashboard />} />
         {/* Legacy paths kept so existing links/bookmarks still work */}
         <Route path="/register" element={<StudentRegistration />} />

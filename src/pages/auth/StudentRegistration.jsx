@@ -36,6 +36,9 @@ export default function StudentRegistration() {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [otpError, setOtpError] = useState("");
   const [otpVerifying, setOtpVerifying] = useState(false);
+  // Set when /verify-otp reports the email already belongs to a registered
+  // member — such users may not register again and are sent back to login.
+  const [alreadyRegistered, setAlreadyRegistered] = useState(false);
   const [timer, setTimer] = useState(165);
   const inputRefs = useRef([]);
 
@@ -202,7 +205,15 @@ export default function StudentRegistration() {
     // API CALL — POST /verify-otp   Body: { email, otp: code }
     // =============================================
     try {
-      await verifyOtpRequest(email, code);
+      const data = await verifyOtpRequest(email, code);
+      // Already-registered users cannot register again — the OTP still
+      // verifies (so they're authenticated), but route them to login instead
+      // of the registration form rather than letting them fill it and be
+      // rejected at submit by the backend's unique-email rule.
+      if (data?.account_exists) {
+        setAlreadyRegistered(true);
+        return;
+      }
       setStep("details");
     } catch (err) {
       setOtpError(
@@ -347,6 +358,36 @@ export default function StudentRegistration() {
       © {new Date().getFullYear()} University of Sri Jayewardenepura
     </p>
   );
+
+  // ══════════════════════════════════════════
+  // ALREADY REGISTERED — block re-registration
+  // ══════════════════════════════════════════
+  if (alreadyRegistered) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 flex flex-col items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-sm text-center">
+          <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 bg-amber-50">
+            <svg className="w-8 h-8 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-1">Already Registered</h2>
+          <p className="text-sm text-gray-500 mb-1">This email is already registered</p>
+          <p className="text-sm font-semibold text-blue-700 mb-5">{email}</p>
+          <p className="text-sm text-gray-500 mb-6">
+            You can't register again with this email. Please log in instead.
+          </p>
+          <button
+            onClick={() => navigate("/")}
+            className="w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold py-2.5 rounded-lg text-sm transition"
+          >
+            Login with Email OTP
+          </button>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   // ══════════════════════════════════════════
   // STEP 1 — EMAIL
@@ -623,9 +664,6 @@ export default function StudentRegistration() {
   const inputClass =
     "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500";
   const labelClass = "block text-sm font-medium text-gray-700 mb-1";
-  const optional = (
-    <span className="text-gray-400 font-normal">(Optional)</span>
-  );
   const required = <span className="text-red-500">*</span>;
 
   // Two-step tab indicator shared by both tabs.
@@ -888,7 +926,7 @@ export default function StudentRegistration() {
 
                 <div>
                   <label className={labelClass}>
-                    Student ID or Guardian ID {optional}
+                    Student ID or Guardian ID
                   </label>
                   <input
                     name="studentId"
@@ -901,7 +939,7 @@ export default function StudentRegistration() {
 
                 {/* Row 4 — Date of Birth · Primary Phone · Secondary Phone */}
                 <div>
-                  <label className={labelClass}>Date of Birth {optional}</label>
+                  <label className={labelClass}>Date of Birth</label>
                   <input
                     type="date"
                     name="dob"
@@ -924,7 +962,7 @@ export default function StudentRegistration() {
 
                 <div>
                   <label className={labelClass}>
-                    Secondary Phone {optional}
+                    Secondary Phone
                   </label>
                   <input
                     name="secondaryPhone"

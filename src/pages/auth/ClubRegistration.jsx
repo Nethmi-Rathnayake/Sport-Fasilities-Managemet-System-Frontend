@@ -24,7 +24,6 @@ const Field = ({ label, required, error, children }) => (
   <div>
     <label className="block text-xs font-medium text-gray-700 mb-1">
       {label} {required && <span className="text-red-500">*</span>}
-      {!required && <span className="text-gray-400 font-normal ml-1">(Optional)</span>}
     </label>
     {children}
     {error && <p className="text-xs text-red-500 mt-0.5">{error}</p>}
@@ -73,6 +72,9 @@ export default function ClubRegistration() {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [otpError, setOtpError] = useState("");
   const [otpVerifying, setOtpVerifying] = useState(false);
+  // Set when /verify-otp reports the responsible-coach email already belongs to
+  // a registered member — such users may not register a club again.
+  const [alreadyRegistered, setAlreadyRegistered] = useState(false);
   const [timer, setTimer] = useState(165);
   const inputRefs = useRef([]);
 
@@ -159,7 +161,14 @@ export default function ClubRegistration() {
     setOtpError("");
     setOtpVerifying(true);
     try {
-      await verifyOtpRequest(email, code);
+      const data = await verifyOtpRequest(email, code);
+      // Already-registered emails cannot start a new club registration — the
+      // backend rejects a duplicate primary-coach email at submit, so stop here
+      // and send them to login instead of into the wizard.
+      if (data?.account_exists) {
+        setAlreadyRegistered(true);
+        return;
+      }
       setPhase("wizard");
     } catch (err) {
       setOtpError(err?.response?.data?.message || "Invalid OTP. Please try again.");
@@ -285,9 +294,10 @@ export default function ClubRegistration() {
   };
 
   const handleSubmit = async () => {
-    // Every coach needs a photo — the API requires coach_photos[].
-    if (coaches.some((c) => !c.photo)) {
-      setSubmitError("Please upload a photo for every coach.");
+    // Only the primary coach (index 0) must have a photo; additional coaches
+    // are optional. The backend requires coach_photos[0].
+    if (!coaches[0]?.photo) {
+      setSubmitError("A profile photo is required for the primary coach.");
       return;
     }
 
@@ -306,8 +316,13 @@ export default function ClubRegistration() {
     fd.append("address", club.address);
 
     const coachPayload = coaches.map((c, i) => ({
-      fullName: c.fullName,
+      title: c.title,
+      initials: c.initials,
+      // Backend (ClubRegistrationController::normalizedInput) maps these
+      // camelCase keys → name_denoted_by_initials / lastname / member_gender_id.
       nameWithInitials: c.nameWithInitials,
+      lastName: c.lastName,
+      memberGenderId: c.memberGenderId,
       // Primary coach (index 0) is the OTP-verified email; the backend also
       // overrides coaches[0].email with the verified session email. Additional
       // coaches send the email typed in the form (stored only, no OTP).
@@ -319,9 +334,11 @@ export default function ClubRegistration() {
       address: c.address,
     }));
     fd.append("coaches", JSON.stringify(coachPayload));
-    // Photos in the SAME order as the coaches array so the backend can pair them.
-    coaches.forEach((c) => {
-      if (c.photo) fd.append("coach_photos[]", c.photo);
+    // Key each photo by its coach index (coach_photos[0], coach_photos[2], …)
+    // so the backend pairs it with the matching coach even when a coach in
+    // between has no photo. Only the primary coach's photo is mandatory.
+    coaches.forEach((c, i) => {
+      if (c.photo) fd.append(`coach_photos[${i}]`, c.photo);
     });
 
     setSubmitError("");
@@ -404,6 +421,36 @@ export default function ClubRegistration() {
       </div>
     </div>
   );
+
+  // ══════════════════════════════════════════════
+  // ALREADY REGISTERED — block re-registration
+  // ══════════════════════════════════════════════
+  if (alreadyRegistered) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 flex flex-col items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-sm text-center">
+          <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 bg-amber-50">
+            <svg className="w-8 h-8 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-1">Already Registered</h2>
+          <p className="text-sm text-gray-500 mb-1">This email is already registered</p>
+          <p className="text-sm font-semibold text-blue-700 mb-5">{email}</p>
+          <p className="text-sm text-gray-500 mb-6">
+            You can't register again with this email. Please log in instead.
+          </p>
+          <button
+            onClick={() => navigate("/")}
+            className="w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold py-2.5 rounded-lg text-sm transition"
+          >
+            Login with Email OTP
+          </button>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   // ══════════════════════════════════════════════
   // GATE STEP 1 — EMAIL
@@ -619,7 +666,7 @@ export default function ClubRegistration() {
       </div>
 
       {/* Coach List */}
-      {coaches.some(c => c.fullName) && (
+      {coaches.some(c => c.nameWithInitials || c.lastName) && (
         <div className="bg-white rounded-xl border border-gray-100 p-4">
           <div className="flex items-center justify-between mb-3">
             <p className="text-xs font-bold text-blue-700">
@@ -650,7 +697,9 @@ export default function ClubRegistration() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-xs font-semibold text-gray-800">{c.fullName || "—"}</p>
+                    <p className="text-xs font-semibold text-gray-800">
+                      {[c.title, c.initials, c.lastName].filter(Boolean).join(" ") || "—"}
+                    </p>
                     {c.nameWithInitials && (
                       <span className="text-xs text-gray-400">({c.nameWithInitials})</span>
                     )}
@@ -766,7 +815,7 @@ export default function ClubRegistration() {
                     <Input icon="📞" name="primaryPhone" value={club.primaryPhone} onChange={handleClubChange} placeholder="Enter primary phone number" />
                   </Field>
                   <Field label="Secondary Phone Number">
-                    <Input icon="📞" name="secondaryPhone" value={club.secondaryPhone} onChange={handleClubChange} placeholder="Enter secondary phone number (optional)" />
+                    <Input icon="📞" name="secondaryPhone" value={club.secondaryPhone} onChange={handleClubChange} placeholder="Enter secondary phone number" />
                   </Field>
                 </div>
 
@@ -830,16 +879,44 @@ export default function ClubRegistration() {
                           <input type="file" accept=".png,.jpg,.jpeg" className="hidden"
                             onChange={e => handleCoachPhoto(coach.id, e.target.files[0])} />
                         </label>
+                        {idx === 0 && (
+                          <span className="text-[10px] font-medium text-gray-400">
+                            Required <span className="text-red-500">*</span>
+                          </span>
+                        )}
                         {coach.photoError && <p className="text-xs text-red-500">{coach.photoError}</p>}
                       </div>
 
                       {/* Fields */}
                       <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                        <Field label="Full Name" required>
-                          <Input value={coach.fullName} onChange={e => handleCoachChange(coach.id, "fullName", e.target.value)} placeholder="Full name" />
+                        <Field label="Title" required>
+                          <select
+                            value={coach.title}
+                            onChange={e => handleCoachChange(coach.id, "title", e.target.value)}
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+                          >
+                            <option value="">-- Select --</option>
+                            {TITLE_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+                          </select>
                         </Field>
-                        <Field label="Name with Initials" required>
-                          <Input value={coach.nameWithInitials} onChange={e => handleCoachChange(coach.id, "nameWithInitials", e.target.value)} placeholder="N. Perera" />
+                        <Field label="Initials" required>
+                          <Input value={coach.initials} onChange={e => handleCoachChange(coach.id, "initials", e.target.value)} placeholder="N.P." />
+                        </Field>
+                        <Field label="Name Denoted by Initials" required>
+                          <Input value={coach.nameWithInitials} onChange={e => handleCoachChange(coach.id, "nameWithInitials", e.target.value)} placeholder="Nimal Perera" />
+                        </Field>
+                        <Field label="Last Name" required>
+                          <Input value={coach.lastName} onChange={e => handleCoachChange(coach.id, "lastName", e.target.value)} placeholder="Perera" />
+                        </Field>
+                        <Field label="Gender" required>
+                          <select
+                            value={coach.memberGenderId}
+                            onChange={e => handleCoachChange(coach.id, "memberGenderId", e.target.value)}
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+                          >
+                            <option value="">-- Select --</option>
+                            {genders.map(g => <option key={g.category_id} value={g.category_id}>{g.description}</option>)}
+                          </select>
                         </Field>
                         <Field label="Email" required>
                           {idx === 0 ? (
@@ -868,7 +945,7 @@ export default function ClubRegistration() {
                           <Input icon="📞" value={coach.primaryPhone} onChange={e => handleCoachChange(coach.id, "primaryPhone", e.target.value)} placeholder="077 123 4567" />
                         </Field>
                         <Field label="Secondary Phone">
-                          <Input icon="📞" value={coach.secondaryPhone} onChange={e => handleCoachChange(coach.id, "secondaryPhone", e.target.value)} placeholder="Enter secondary (optional)" />
+                          <Input icon="📞" value={coach.secondaryPhone} onChange={e => handleCoachChange(coach.id, "secondaryPhone", e.target.value)} placeholder="Enter secondary phone number" />
                         </Field>
                         <Field label="Date of Birth">
                           <input type="date" value={coach.dob}

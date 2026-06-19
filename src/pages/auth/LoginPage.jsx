@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import EmailStep from "../../components/auth/EmailStep";
 import OtpStep from "../../components/auth/OtpStep";
 import { sendOtp } from "../../services/authService";
+import { isEmailRegistered } from "../../services/memberService";
 
 // Map the authenticated user's role (from the /verify-otp "account routing
 // details") to a placeholder message. The real dashboards aren't built yet, so
@@ -23,6 +24,9 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   // Placeholder message shown after a registered user verifies their OTP.
   const [loginMessage, setLoginMessage] = useState("");
+  // Set when the verified email has no account — we ask them to register
+  // instead of logging in.
+  const [notRegistered, setNotRegistered] = useState(false);
   const navigate = useNavigate();
 
   const handleSendOtp = (sentEmail) => {
@@ -30,10 +34,31 @@ export default function LoginPage() {
     setStep("otp");
   };
 
+  // Runs when the user clicks "Send OTP" (via EmailStep's beforeSend hook).
+  // Logging in requires an existing account, so we check registration FIRST and
+  // block the OTP for unregistered emails — prompting them to register instead.
+  const handleBeforeSend = async (candidateEmail) => {
+    try {
+      const registered = await isEmailRegistered(candidateEmail);
+      if (!registered) {
+        setEmail(candidateEmail);
+        setNotRegistered(true);
+        toast.error("No account found. Please register to login.");
+        return false; // abort — do not send OTP
+      }
+      return true; // registered — proceed to send OTP
+    } catch {
+      // If the lookup fails (network/server), don't block login — fall through
+      // to the OTP flow, which still verifies the account on the backend.
+      return true;
+    }
+  };
+
   const handleVerify = (data) => {
     // `data` is the /verify-otp response ("account routing details"). Resolve
     // the user's role and whether the email is already registered, tolerating
     // different backend key names.
+    const member = data?.member ?? null;
     const role =
       data?.role ??
       data?.member_type ??
@@ -41,39 +66,90 @@ export default function LoginPage() {
       data?.type ??
       data?.account_type ??
       data?.user?.role ??
-      data?.member?.member_type;
-    const message = rolePlaceholderMessage(role);
+      member?.member_type;
     const registered =
+      data?.account_exists ??
       data?.userExists ??
       data?.registered ??
       data?.exists ??
       data?.is_registered ??
-      Boolean(message);
+      Boolean(member);
 
-    // Coaches now have a real dashboard — route them there with their member
-    // record (the /verify-otp "member" payload). Other roles keep the
-    // placeholder until their dashboards are built.
+    // Not registered: this email has no account, so they can't log in.
+    // Ask them to register first instead of routing into the dashboards.
+    if (!registered) {
+      setNotRegistered(true);
+      toast.error("No account found. Please register to login.");
+      return;
+    }
+
+    // ── Already registered ────────────────────────────────────────────────
+    // Branch on payment status:
+    //   • Payment done  → send them to the relevant dashboard.
+    //   • Payment pending → send them to the summary page so they can review
+    //     their submitted details and complete payment.
+    const paid = String(member?.payment_status || "").toLowerCase().includes("paid");
+
+    if (!paid) {
+      toast("Payment pending — review your details.", { icon: "💳" });
+      navigate("/registration-status", { state: { member, email } });
+      return;
+    }
+
+    // Paid — route to the relevant dashboard.
     const isCoach =
       data?.redirect_to === "coach_dashboard" || String(role || "").toLowerCase().includes("coach");
-    if (registered && isCoach && data?.member) {
+    if (isCoach && member) {
       toast.success("Welcome back, Coach!");
-      navigate("/coach-dashboard", { state: { member: data.member } });
+      navigate("/coach-dashboard", { state: { member } });
       return;
     }
 
-    if (registered) {
-      // Already-registered user: show the role-based placeholder immediately
-      // after OTP verification instead of navigating to a (not-yet-built) dashboard.
-      const text =
-        message || "Login successful. Your dashboard is under development.";
-      setLoginMessage(text);
-      toast.success(text);
-      return;
-    }
-
-    // New user: let them choose whether to register as a Student or a Club.
-    navigate("/select-registration", { state: { email } });
+    // Other roles' dashboards aren't built yet — show the role-based placeholder.
+    const text = rolePlaceholderMessage(role) || "Login successful. Your dashboard is under development.";
+    setLoginMessage(text);
+    toast.success(text);
   };
+
+  // ── Not registered — prompt to register ───────────────────────────────────
+  if (notRegistered) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 flex flex-col items-center justify-center p-4">
+        <div className="w-full max-w-sm bg-white rounded-2xl shadow-lg p-8 text-center">
+          <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 bg-amber-50">
+            <svg className="w-8 h-8 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-1">No Account Found</h2>
+          <p className="text-sm text-gray-500 mb-1">No registration exists for</p>
+          <p className="text-sm font-semibold text-blue-700 mb-5">{email}</p>
+          <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-4 mb-5">
+            <p className="text-base font-semibold text-amber-700">Please register to login.</p>
+          </div>
+          <button
+            onClick={() => navigate("/select-registration", { state: { email } })}
+            className="w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold py-2.5 rounded-lg text-sm transition mb-3"
+          >
+            Register Now
+          </button>
+          <button
+            onClick={() => {
+              setNotRegistered(false);
+              setStep("email");
+              setEmail("");
+            }}
+            className="w-full text-blue-600 font-semibold text-sm hover:underline"
+          >
+            Back to Login
+          </button>
+        </div>
+        <p className="text-xs text-gray-400 mt-8">
+          © {new Date().getFullYear()} University of Sri Jayewardenepura
+        </p>
+      </div>
+    );
+  }
 
   // ── Post-login placeholder (registered user) ──────────────────────────────
   if (loginMessage) {
@@ -150,7 +226,7 @@ export default function LoginPage() {
       {/* Card */}
       <div className="w-full max-w-sm">
         {step === "email"
-          ? <EmailStep onSend={handleSendOtp} />
+          ? <EmailStep onSend={handleSendOtp} beforeSend={handleBeforeSend} />
           : <OtpStep email={email} onVerify={handleVerify} onResend={() => sendOtp(email)} />
         }
 
