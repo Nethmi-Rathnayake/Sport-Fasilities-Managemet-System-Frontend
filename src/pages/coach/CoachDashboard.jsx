@@ -7,6 +7,7 @@ import {
   approveClubRequest,
   rejectClubRequest,
   getClubMembers,
+  getMemberTypes,
   getFacilities,
   getFacilityAvailability,
   getClub,
@@ -74,24 +75,35 @@ const ICONS = {
   check: "M5 13l4 4L19 7",
   x: "M6 18L18 6M6 6l12 12",
   bell: "M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9",
+  dashboard: "M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zM14 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z",
+  facilities: "M3 21h18M5 21V7l8-4v18M19 21V11l-6-3M9 9h.01M9 12h.01M9 15h.01",
+  analysis: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z",
+  coordinators: "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z",
+  settings: "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z|M15 12a3 3 0 11-6 0 3 3 0 016 0z",
 };
 
 const NAV = [
-  { key: "club", label: "My Club", icon: ICONS.club },
-  { key: "requests", label: "Student Requests", icon: ICONS.requests },
+  { key: "club", label: "Dashboard", icon: ICONS.dashboard },
   { key: "members", label: "Members", icon: ICONS.members },
-  { key: "bookings", label: "Bookings", icon: ICONS.bookings },
+  { key: "facilities", label: "Facilities", icon: ICONS.facilities },
+  { key: "bookings", label: "Booking", icon: ICONS.bookings },
   { key: "attendance", label: "Attendance", icon: ICONS.attendance },
   { key: "payments", label: "Payments", icon: ICONS.payments },
+  { key: "analysis", label: "Analysis", icon: ICONS.analysis },
+  { key: "coordinators", label: "Coordinators", icon: ICONS.coordinators },
+  { key: "settings", label: "Settings", icon: ICONS.settings },
 ];
 
 const VIEW_TITLES = {
-  club: "My Club",
-  requests: "Student Requests",
+  club: "Dashboard",
   members: "Members",
-  bookings: "Bookings",
+  facilities: "Facilities",
+  bookings: "Booking",
   attendance: "Attendance",
   payments: "Payments",
+  analysis: "Analysis",
+  coordinators: "Coordinators",
+  settings: "Settings",
 };
 
 const statusColor = (status) => {
@@ -174,6 +186,13 @@ export default function CoachDashboard() {
   const [attDate, setAttDate] = useState("");
   const [attLoading, setAttLoading] = useState(false);
 
+  // Coordinators (club coaches) state
+  const [coordinators, setCoordinators] = useState([]);
+  const [coordLoading, setCoordLoading] = useState(false);
+
+  // Settings — refreshing the coach's own profile
+  const [profileRefreshing, setProfileRefreshing] = useState(false);
+
   useEffect(() => {
     if (!coach) navigate("/login", { replace: true });
   }, [coach, navigate]);
@@ -223,6 +242,55 @@ export default function CoachDashboard() {
       setMembers([]);
     }
   }, [coach]);
+
+  // Coordinators = the club's coaches. Resolve the "Coach" member-type id, then
+  // fetch club members filtered to that type (falling back to a client-side
+  // filter on member_type if the id can't be resolved).
+  const loadCoordinators = useCallback(async () => {
+    if (!coach?.club_id) {
+      setCoordinators([]);
+      return;
+    }
+    setCoordLoading(true);
+    try {
+      const types = await getMemberTypes().catch(() => []);
+      const coachType = (Array.isArray(types) ? types : []).find((t) =>
+        /coach/i.test(t.description)
+      );
+      const list = await getClubMembers(
+        coach.club_id,
+        coachType ? { member_type_id: coachType.category_id } : {}
+      );
+      const arr = Array.isArray(list) ? list : [];
+      setCoordinators(coachType ? arr : arr.filter((m) => /coach/i.test(m.member_type)));
+    } catch {
+      setCoordinators([]);
+      toast.error("Could not load coordinators.");
+    } finally {
+      setCoordLoading(false);
+    }
+  }, [coach]);
+
+  // Settings — pull the latest copy of the coach's own member record.
+  const refreshProfile = useCallback(async () => {
+    if (!coach?.id) return;
+    setProfileRefreshing(true);
+    try {
+      const full = await getMember(coach.id);
+      if (full) {
+        setCoach((prev) => {
+          const merged = { ...prev, ...full };
+          sessionStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+          return merged;
+        });
+        toast.success("Profile refreshed.");
+      }
+    } catch {
+      toast.error("Could not refresh profile.");
+    } finally {
+      setProfileRefreshing(false);
+    }
+  }, [coach?.id]);
 
   // Initial load — club, requests, members, facilities, payments in parallel.
   useEffect(() => {
@@ -290,6 +358,12 @@ export default function CoachDashboard() {
     };
   }, [active, attDate]);
 
+  // Load coordinators when the Coordinators tab is opened.
+  useEffect(() => {
+    if (active !== "coordinators") return;
+    loadCoordinators();
+  }, [active, loadCoordinators]);
+
   const handleApprove = async (memberId) => {
     setActingId(memberId);
     try {
@@ -342,6 +416,9 @@ export default function CoachDashboard() {
           .then((d) => setAttendances(Array.isArray(d) ? d : []))
           .catch(() => {})
       );
+    }
+    if (active === "coordinators") {
+      tasks.push(loadCoordinators());
     }
     try {
       await Promise.all(tasks);
@@ -747,15 +824,192 @@ export default function CoachDashboard() {
     </div>
   );
 
+  const FacilitiesView = () => (
+    <div className="bg-white rounded-2xl shadow-sm p-5">
+      <h3 className="font-bold text-sm mb-4" style={{ color: NAVY }}>Facilities ({facilities.length})</h3>
+      {facilities.length === 0 ? (
+        <EmptyState icon={ICONS.facilities} text="No facilities are configured yet." />
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {facilities.map((f) => (
+            <div key={f.id} className="rounded-xl border border-gray-100 p-4 flex flex-col gap-3">
+              <div className="flex items-start gap-3">
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: `linear-gradient(135deg, ${PRIMARY_DARK}, ${PRIMARY})` }}>
+                  <Icon path={ICONS.facilities} className="w-6 h-6" stroke="#fff" width={1.8} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold truncate" style={{ color: NAVY }}>{f.facility_name || "—"}</p>
+                  <p className="text-xs text-gray-400 truncate">{f.facility_code || f.location || ""}</p>
+                </div>
+                <Pill>{f.facility_status}</Pill>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-400">Booking fee</span>
+                <span className="text-xs font-semibold text-gray-700">{money(f.booking_fee)}</span>
+              </div>
+              <button
+                onClick={() => { setSelectedFacilityId(f.id); setActive("bookings"); }}
+                className="mt-1 w-full py-2 rounded-lg text-xs font-semibold text-white transition"
+                style={{ backgroundColor: PRIMARY }}>
+                View availability
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const AnalysisView = () => {
+    const statusCounts = members.reduce((acc, m) => {
+      const k = m.member_status || "Unknown";
+      acc[k] = (acc[k] || 0) + 1;
+      return acc;
+    }, {});
+    const statusRows = Object.entries(statusCounts).sort((a, b) => b[1] - a[1]);
+    const maxCount = statusRows.reduce((mx, [, n]) => Math.max(mx, n), 0) || 1;
+    return (
+      <>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {stats.map((s, i) => (
+            <div key={i} className="bg-white rounded-2xl p-5 shadow-sm flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: LIGHT }}>
+                <Icon path={s.icon} className="w-6 h-6" stroke={s.accent} width={2} />
+              </div>
+              <div className="min-w-0">
+                <p className="font-extrabold truncate text-2xl" style={{ color: NAVY }}>{s.value}</p>
+                <p className="text-xs text-gray-400">{s.label}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="bg-white rounded-2xl shadow-sm p-5">
+          <h3 className="font-bold text-sm mb-4" style={{ color: NAVY }}>Members by Status</h3>
+          {statusRows.length === 0 ? (
+            <EmptyState icon={ICONS.analysis} text="No member data to analyse yet." />
+          ) : (
+            <div className="space-y-3">
+              {statusRows.map(([status, count]) => (
+                <div key={status}>
+                  <div className="flex items-center justify-between text-xs mb-1">
+                    <span className="text-gray-600 font-medium">{status}</span>
+                    <span className="text-gray-400">{count}</span>
+                  </div>
+                  <div className="h-2.5 rounded-full bg-gray-100 overflow-hidden">
+                    <div className="h-full rounded-full" style={{ width: `${(count / maxCount) * 100}%`, backgroundColor: PRIMARY }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </>
+    );
+  };
+
+  const CoordinatorsView = () => (
+    <div className="bg-white rounded-2xl shadow-sm p-5">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-bold text-sm" style={{ color: NAVY }}>Coordinators ({coordinators.length})</h3>
+        <button onClick={loadCoordinators} className="text-xs font-semibold" style={{ color: PRIMARY }}>Refresh</button>
+      </div>
+      {!coach.club_id ? (
+        <EmptyState icon={ICONS.club} text="You are not linked to a club yet." />
+      ) : coordLoading ? (
+        <p className="text-sm text-gray-400 py-10 text-center">Loading coordinators…</p>
+      ) : coordinators.length === 0 ? (
+        <EmptyState icon={ICONS.coordinators} text="No coordinators (coaches) found for your club." />
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {coordinators.map((c) => {
+            const name = buildName(c.initials, c.name_denoted_by_initials, c.lastname);
+            return (
+              <div key={c.id} className="rounded-xl border border-gray-100 p-4 flex flex-col gap-3">
+                <div className="flex items-center gap-3">
+                  <Avatar name={name} url={storageUrl(c.photo_path) || c.photo_url} size={44} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold truncate" style={{ color: NAVY }}>{name}</p>
+                    <p className="text-xs text-gray-400 truncate">{c.member_id}</p>
+                  </div>
+                  {c.id === coach.id && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: LIGHT, color: PRIMARY }}>You</span>
+                  )}
+                </div>
+                <div className="text-xs text-gray-500 space-y-1">
+                  <p className="break-words">{c.email || "—"}</p>
+                  <p>{c.primary_phone_number || "—"}</p>
+                </div>
+                <div className="flex items-center gap-2 mt-auto">
+                  <Pill>{c.member_status}</Pill>
+                  <Pill>{c.payment_status}</Pill>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+
+  const SettingsView = () => (
+    <div className="bg-white rounded-2xl shadow-sm p-6 max-w-2xl">
+      <div className="flex items-center justify-between mb-5">
+        <h3 className="font-bold text-sm" style={{ color: NAVY }}>My Account</h3>
+        <button
+          onClick={refreshProfile}
+          disabled={profileRefreshing}
+          className="inline-flex items-center gap-1.5 text-xs font-semibold disabled:opacity-60"
+          style={{ color: PRIMARY }}>
+          <Icon path={ICONS.refresh} className={`w-4 h-4 ${profileRefreshing ? "animate-spin" : ""}`} stroke={PRIMARY} width={2} />
+          {profileRefreshing ? "Refreshing…" : "Refresh"}
+        </button>
+      </div>
+      <div className="flex items-center gap-4 mb-5">
+        <Avatar name={coachName} url={storageUrl(coach.photo_path) || coach.photo_url} size={56} />
+        <div className="min-w-0">
+          <p className="font-bold text-base truncate" style={{ color: NAVY }}>{coachName}</p>
+          <p className="text-xs text-gray-400 truncate">{coach.member_id} · {coach.member_type || "Coach"}</p>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-6">
+        <InfoRow label="Email" value={coach.email} />
+        <InfoRow label="NIC" value={coach.nic_number} />
+        <InfoRow label="Primary Phone" value={coach.primary_phone_number} />
+        <InfoRow label="Secondary Phone" value={coach.secondary_phone_number} />
+        <InfoRow label="Club" value={coach.club_name} />
+        <InfoRow label="Member Status" value={coach.member_status} />
+        <InfoRow label="Payment Status" value={coach.payment_status} />
+        <InfoRow label="Date of Birth" value={fmtDate(coach.date_of_birth)} />
+        <InfoRow label="Address" value={coach.address} />
+      </div>
+      <p className="text-xs text-gray-400 mt-5">Your account details are read here from your member record.</p>
+    </div>
+  );
+
   const renderView = () => {
     if (loading) return <p className="text-sm text-gray-400 py-20 text-center">Loading dashboard…</p>;
     switch (active) {
-      case "requests": return <RequestsView />;
       case "members": return <MembersView />;
+      case "facilities": return <FacilitiesView />;
       case "bookings": return <BookingsView />;
       case "attendance": return <AttendanceView />;
       case "payments": return <PaymentsView />;
-      default: return <MyClubView />;
+      case "analysis": return <AnalysisView />;
+      case "coordinators": return <CoordinatorsView />;
+      case "settings": return <SettingsView />;
+      default:
+        // Dashboard — overview plus the pending student-verification requests
+        // (approve/reject) so the coach can action them from the landing tab.
+        return (
+          <>
+            <MyClubView />
+            {coach.club_id && (
+              <div className="mt-6">
+                <RequestsView />
+              </div>
+            )}
+          </>
+        );
     }
   };
 

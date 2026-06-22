@@ -21,9 +21,15 @@ export const rejectClubRequest = (memberId, coachId) =>
     .post(`/api/club-verification-requests/${memberId}/reject`, { coach_id: coachId })
     .then((r) => (Array.isArray(r.data) ? r.data[0] : r.data));
 
-// GET /api/members?club_id=… → array of club members
-export const getClubMembers = (clubId) =>
-  api.get(`/api/members`, { params: { club_id: clubId } }).then((r) => r.data);
+// GET /api/members?club_id=…[&member_type_id=…&…] → array of club members.
+// Extra params (e.g. member_type_id) are forwarded to the same endpoint, so the
+// caller can narrow to a single member type (used for Coordinators = coaches).
+export const getClubMembers = (clubId, params = {}) =>
+  api.get(`/api/members`, { params: { club_id: clubId, ...params } }).then((r) => r.data);
+
+// GET /api/member-types → array of Member Type categories ({category_id, description}).
+// Used to resolve the "Coach" type id so coordinators can be fetched by type.
+export const getMemberTypes = () => api.get(`/api/member-types`).then((r) => r.data);
 
 // GET /api/facilities → array of facilities (with slot_count + booking_fee)
 export const getFacilities = () => api.get(`/api/facilities`).then((r) => r.data);
