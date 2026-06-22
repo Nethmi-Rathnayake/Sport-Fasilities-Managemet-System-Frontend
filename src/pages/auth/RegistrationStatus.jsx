@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import logo from "../../assets/usjp-logo__1_-removebg-preview.png";
-import { getMember } from "../../services/memberService";
+import { getMember, updateMember } from "../../services/memberService";
 import api, { storageUrl } from "../../services/api";
 
 // Shown after an ALREADY-REGISTERED member verifies their OTP but has NOT yet
@@ -83,12 +83,13 @@ export default function RegistrationStatus() {
   const [member, setMember] = useState(initial);
   const [loading, setLoading] = useState(Boolean(initial?.id));
 
-  // ── Edit-mode state (frontend only — changes live in React state) ─────────
+  // ── Edit-mode state ───────────────────────────────────────────────────────
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
   const [genders, setGenders] = useState([]);
   const [photoPreview, setPhotoPreview] = useState(null);
+  const [photoFile, setPhotoFile] = useState(null);
   const [form, setForm] = useState({
     title: "",
     initials: "",
@@ -165,6 +166,7 @@ export default function RegistrationStatus() {
       address: member.address || "",
     });
     setPhotoPreview(null);
+    setPhotoFile(null);
     setFormError("");
     setEditing(true);
   };
@@ -173,6 +175,7 @@ export default function RegistrationStatus() {
     setEditing(false);
     setFormError("");
     setPhotoPreview(null);
+    setPhotoFile(null);
   };
 
   const handleChange = (e) =>
@@ -180,12 +183,16 @@ export default function RegistrationStatus() {
 
   const handlePhoto = (e) => {
     const file = e.target.files?.[0];
-    if (file) setPhotoPreview(URL.createObjectURL(file));
+    if (file) {
+      setPhotoFile(file);
+      setPhotoPreview(URL.createObjectURL(file));
+    }
   };
 
-  // Save — frontend only. Merge the edited values back into the member object
-  // held in React state so the view updates immediately. No API call.
-  const handleSave = () => {
+  // Save — persists the edited details to the backend
+  // (PUT /api/members/{id}, via updateMember). On success the returned record
+  // is merged into state so the view reflects exactly what was stored.
+  const handleSave = async () => {
     if (
       !form.title.trim() ||
       !form.initials.trim() ||
@@ -200,31 +207,39 @@ export default function RegistrationStatus() {
       return;
     }
 
+    const fd = new FormData();
+    fd.append("title", form.title.trim());
+    fd.append("initials", form.initials.trim());
+    fd.append("name_denoted_by_initials", form.nameWithInitials.trim());
+    fd.append("lastname", form.lastName.trim());
+    fd.append("member_gender_id", form.memberGenderId);
+    fd.append("nic", form.nic.trim());
+    fd.append("date_of_birth", form.dob || "");
+    fd.append("primary_phone", form.primaryPhone.trim());
+    fd.append("secondary_phone", form.secondaryPhone.trim());
+    fd.append("address", form.address.trim());
+    if (photoFile) fd.append("photo", photoFile);
+
     setSaving(true);
-    const selectedGender = genders.find(
-      (g) => String(g.category_id) === String(form.memberGenderId)
-    );
-
-    setMember((prev) => ({
-      ...prev,
-      title: form.title.trim(),
-      initials: form.initials.trim(),
-      name_denoted_by_initials: form.nameWithInitials.trim(),
-      lastname: form.lastName.trim(),
-      member_gender_id: form.memberGenderId,
-      member_gender: selectedGender?.description ?? prev.member_gender,
-      nic_number: form.nic.trim(),
-      date_of_birth: form.dob || null,
-      primary_phone_number: form.primaryPhone.trim(),
-      secondary_phone_number: form.secondaryPhone.trim() || null,
-      address: form.address.trim(),
-    }));
-
-    setSaving(false);
-    setEditing(false);
-    setPhotoPreview(null);
     setFormError("");
-    toast.success("Your details have been updated.");
+    try {
+      const { message, ...updated } = (await updateMember(member.id, fd)) || {};
+      setMember((prev) => ({ ...prev, ...updated }));
+      setEditing(false);
+      setPhotoPreview(null);
+      setPhotoFile(null);
+      toast.success(message || "Your details have been updated.");
+    } catch (err) {
+      const data = err?.response?.data;
+      const firstError = data?.errors
+        ? Object.values(data.errors)[0]?.[0]
+        : null;
+      const msg = firstError || data?.message || "Could not save your changes. Please try again.";
+      setFormError(msg);
+      toast.error(msg);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const name = buildName(member.initials, member.name_denoted_by_initials, member.lastname);

@@ -9,6 +9,22 @@ import api from "./api";
 export const getMember = (id) =>
   api.get(`/api/members/${id}`).then((r) => (Array.isArray(r.data) ? r.data[0] : r.data));
 
+// PUT /api/members/{id} → update a member's editable personal details
+// (title, names, gender, NIC, phones, DOB, address, photo). It's a partial
+// update: only the fields present in the FormData are changed.
+//
+// We send an actual POST with a `_method=PUT` field (Laravel method spoofing)
+// rather than a real PUT, because the form can upload a photo as
+// multipart/form-data and PHP does not populate multipart bodies on PUT/PATCH
+// requests. The response wraps the updated record in an outer array (like
+// show); it is unwrapped here so callers get a plain object.
+export const updateMember = (id, formData) => {
+  formData.append("_method", "PUT");
+  return api
+    .post(`/api/members/${id}`, formData)
+    .then((r) => (Array.isArray(r.data) ? r.data[0] : r.data));
+};
+
 // GET /api/payments?payer_id=… → this member's own payments.
 export const getMemberPayments = (payerId) =>
   api.get(`/api/payments`, { params: { payer_id: payerId } }).then((r) => (Array.isArray(r.data) ? r.data : []));
