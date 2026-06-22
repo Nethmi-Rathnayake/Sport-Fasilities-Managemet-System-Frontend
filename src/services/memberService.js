@@ -9,6 +9,10 @@ import api from "./api";
 export const getMember = (id) =>
   api.get(`/api/members/${id}`).then((r) => (Array.isArray(r.data) ? r.data[0] : r.data));
 
+// GET /api/payments?payer_id=… → this member's own payments.
+export const getMemberPayments = (payerId) =>
+  api.get(`/api/payments`, { params: { payer_id: payerId } }).then((r) => (Array.isArray(r.data) ? r.data : []));
+
 // Returns true if a member account exists for this exact email. Used by the
 // login page to decide — BEFORE sending an OTP — whether the person is
 // registered. There is no dedicated "exists" endpoint, so we reuse the members

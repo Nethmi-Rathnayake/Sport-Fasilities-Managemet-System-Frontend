@@ -96,16 +96,27 @@ export default function LoginPage() {
       return;
     }
 
-    // Paid — route to the relevant dashboard.
-    const isCoach =
-      data?.redirect_to === "coach_dashboard" || String(role || "").toLowerCase().includes("coach");
-    if (isCoach && member) {
+    // Paid — route to the relevant dashboard for the member's role.
+    const r = String(role || "").toLowerCase();
+    const isCoach = data?.redirect_to === "coach_dashboard" || r.includes("coach");
+
+    if (member && isCoach) {
       toast.success("Welcome back, Coach!");
       navigate("/coach-dashboard", { state: { member } });
       return;
     }
+    if (member && r.includes("club")) {
+      toast.success("Welcome back!");
+      navigate("/student-dashboard", { state: { member } });
+      return;
+    }
+    if (member && r.includes("independent")) {
+      toast.success("Welcome back!");
+      navigate("/independent-dashboard", { state: { member } });
+      return;
+    }
 
-    // Other roles' dashboards aren't built yet — show the role-based placeholder.
+    // Unknown role — fall back to a placeholder message.
     const text = rolePlaceholderMessage(role) || "Login successful. Your dashboard is under development.";
     setLoginMessage(text);
     toast.success(text);

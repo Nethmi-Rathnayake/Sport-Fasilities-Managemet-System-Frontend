@@ -734,7 +734,7 @@ export default function StudentRegistration() {
     ["Last Name", form.lastName],
     ["Gender", selectedGender?.description],
     ["Email Address", email],
-    ["Student ID or Guardian ID", form.studentId || "—"],
+    ["Student NIC or Guardian NIC", form.studentId || "—"],
     ["Date of Birth", form.dob || "—"],
     ["Primary Phone", form.primaryPhone],
     ["Secondary Phone", form.secondaryPhone || "—"],
@@ -926,7 +926,7 @@ export default function StudentRegistration() {
 
                 <div>
                   <label className={labelClass}>
-                    Student ID or Guardian ID
+                    Student NIC <span>or Guardian NIC</span>
                   </label>
                   <input
                     name="studentId"

@@ -19,7 +19,11 @@ import { storageUrl } from "../../services/api";
 // ── Design tokens — aligned with the OTP LoginPage palette ──
 // (clean blue gradient background, white rounded-2xl cards, blue-700 accents).
 const PRIMARY = "#1d4ed8"; // blue-700, matches LoginPage text/accent
-const PRIMARY_DARK = "#1e3a8a"; // blue-900, sidebar gradient top
+const PRIMARY_DARK = "#1e3a8a"; // blue-900, used for icon-chip gradients
+// Sidebar gradient — a slightly darker blue than the accent so it reads as a
+// deep navy-blue while staying in the LoginPage blue family.
+const SIDEBAR_TOP = "#172554"; // blue-950
+const SIDEBAR_BOTTOM = "#1e3a8a"; // blue-900
 const NAVY = "#0f1c3f"; // headings
 const LIGHT = "#e8f0fe"; // icon chip bg
 const STORAGE_KEY = "sfmis_coach";
@@ -65,6 +69,7 @@ const ICONS = {
   attendance: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7l2 2 4-4",
   payments: "M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z",
   logout: "M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1",
+  refresh: "M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15",
   clock: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z",
   check: "M5 13l4 4L19 7",
   x: "M6 18L18 6M6 6l12 12",
@@ -155,6 +160,7 @@ export default function CoachDashboard() {
   const [facilities, setFacilities] = useState([]);
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [actingId, setActingId] = useState(null);
 
   // Bookings (facility availability) state
@@ -313,6 +319,36 @@ export default function CoachDashboard() {
   const handleLogout = () => {
     sessionStorage.removeItem(STORAGE_KEY);
     navigate("/login", { replace: true });
+  };
+
+  // Header refresh — reloads the core datasets plus whatever the active tab
+  // needs, with a spinning indicator while in flight.
+  const handleRefresh = async () => {
+    if (!coach || refreshing) return;
+    setRefreshing(true);
+    const tasks = [getFacilities().then(setFacilities).catch(() => {})];
+    if (coach.club_id) {
+      tasks.push(getClub(coach.club_id).then(setClub).catch(() => {}));
+      tasks.push(refreshRequests());
+      tasks.push(refreshMembers());
+      tasks.push(getClubPayments(coach.club_id).then(setPayments).catch(() => {}));
+    }
+    if (active === "bookings" && selectedFacilityId) {
+      tasks.push(getFacilityAvailability(selectedFacilityId, bookDate).then(setAvailability).catch(() => {}));
+    }
+    if (active === "attendance") {
+      tasks.push(
+        getAttendances(attDate ? { date: attDate } : {})
+          .then((d) => setAttendances(Array.isArray(d) ? d : []))
+          .catch(() => {})
+      );
+    }
+    try {
+      await Promise.all(tasks);
+      toast.success("Dashboard refreshed.");
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   // Narrow global attendance feed to this coach's club members.
@@ -728,7 +764,7 @@ export default function CoachDashboard() {
       {/* ══ SIDEBAR ══ */}
       <aside
         className={`fixed lg:static z-40 inset-y-0 left-0 w-64 flex flex-col transition-transform ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
-        style={{ background: `linear-gradient(180deg, ${PRIMARY_DARK} 0%, ${PRIMARY} 100%)` }}>
+        style={{ background: `linear-gradient(180deg, ${SIDEBAR_TOP} 0%, ${SIDEBAR_BOTTOM} 100%)` }}>
         <div className="flex items-center gap-3 px-5 h-16 border-b border-white/10">
           <div className="w-9 h-9 rounded-full flex items-center justify-center bg-white">
             <img src={logo} alt="USJ" className="w-7 h-7 object-contain" />
@@ -769,7 +805,12 @@ export default function CoachDashboard() {
         </nav>
 
         <div className="px-3 py-4 border-t border-white/10">
-          <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-blue-100 hover:bg-white/10">
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors"
+            style={{ backgroundColor: "rgba(239,68,68,0.15)", color: "#fca5a5" }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#ef4444"; e.currentTarget.style.color = "#fff"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "rgba(239,68,68,0.15)"; e.currentTarget.style.color = "#fca5a5"; }}>
             <Icon path={ICONS.logout} className="w-5 h-5" width={1.8} />
             Logout
           </button>
@@ -792,6 +833,16 @@ export default function CoachDashboard() {
             </div>
           </div>
           <div className="flex items-center gap-3 flex-shrink-0">
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-60"
+              style={{ backgroundColor: LIGHT, color: PRIMARY }}
+              aria-label="Refresh"
+              title="Refresh dashboard">
+              <Icon path={ICONS.refresh} className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} stroke={PRIMARY} width={2} />
+              <span className="hidden sm:inline">{refreshing ? "Refreshing…" : "Refresh"}</span>
+            </button>
             <button className="relative text-gray-500" aria-label="Notifications">
               <Icon path={ICONS.bell} className="w-5 h-5" stroke="#6b7280" width={1.8} />
               {requests.length > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-bold text-white flex items-center justify-center" style={{ backgroundColor: "#ef4444" }}>{requests.length}</span>}

@@ -8,6 +8,8 @@ import StudentRegistration from "./pages/auth/StudentRegistration";
 import ClubRegistration from "./pages/auth/ClubRegistration";
 import RegistrationStatus from "./pages/auth/RegistrationStatus";
 import CoachDashboard from "./pages/coach/CoachDashboard";
+import StudentDashboard from "./pages/student/StudentDashboard";
+import IndependentDashboard from "./pages/independent/IndependentDashboard";
 
 function App() {
   return (
@@ -21,6 +23,8 @@ function App() {
         <Route path="/club-registration" element={<ClubRegistration />} />
         <Route path="/registration-status" element={<RegistrationStatus />} />
         <Route path="/coach-dashboard" element={<CoachDashboard />} />
+        <Route path="/student-dashboard" element={<StudentDashboard />} />
+        <Route path="/independent-dashboard" element={<IndependentDashboard />} />
         {/* Legacy paths kept so existing links/bookmarks still work */}
         <Route path="/register" element={<StudentRegistration />} />
         <Route path="/clubregister" element={<ClubRegistration />} />
