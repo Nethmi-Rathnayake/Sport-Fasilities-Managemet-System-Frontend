@@ -257,6 +257,11 @@ export default function StudentRegistration() {
   // Sri Lankan phone validation: 07X XXXXXXX (10 digits starting with 07)
   const isValidPhone = (phone) => /^0[1-9]\d{8}$/.test(phone.replace(/\s/g, ""));
 
+  // Initials must be single letters each followed by a dot, e.g. "T.N." or
+  // "A.B.C." (spaces between them are tolerated). Rejects "TN", "T.N", "Tharindu".
+  const isValidInitials = (value) =>
+    /^([A-Za-z]\.\s?)+$/.test(value.trim());
+
   // Validate everything collected on Tab 1. Returns a map of
   // field-name → message (empty map means valid). The photo lives outside
   // `form`, so its message is tracked under the "photo" key and mirrored into
@@ -266,6 +271,8 @@ export default function StudentRegistration() {
     if (!photoFile) errs.photo = "Please upload your profile photo.";
     if (!form.title) errs.title = "Please select a title.";
     if (!form.initials.trim()) errs.initials = "Please enter your initials.";
+    else if (!isValidInitials(form.initials))
+      errs.initials = "Use dots between initials, e.g. T.N. or A.B.C.";
     if (!form.nameWithInitials.trim())
       errs.nameWithInitials = "Please enter the name denoted by your initials.";
     if (!form.lastName.trim()) errs.lastName = "Please enter your last name.";

@@ -299,6 +299,9 @@ export default function ClubRegistration() {
       const e = {};
       if (!c.title) e.title = "Required";
       if (!c.initials.trim()) e.initials = "Required";
+      // Initials must be single letters each followed by a dot, e.g. "N.P."
+      else if (!/^([A-Za-z]\.\s?)+$/.test(c.initials.trim()))
+        e.initials = "Use dots between initials, e.g. N.P.";
       if (!c.nameWithInitials.trim()) e.nameWithInitials = "Required";
       if (!c.lastName.trim()) e.lastName = "Required";
       if (!c.memberGenderId) e.memberGenderId = "Required";
