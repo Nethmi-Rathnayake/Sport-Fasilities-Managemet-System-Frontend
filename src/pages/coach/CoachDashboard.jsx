@@ -80,6 +80,8 @@ const ICONS = {
   analysis: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z",
   coordinators: "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z",
   settings: "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z|M15 12a3 3 0 11-6 0 3 3 0 016 0z",
+  chevron: "M19 9l-7 7-7-7",
+  user: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z",
 };
 
 const NAV = [
@@ -165,6 +167,8 @@ export default function CoachDashboard() {
 
   const [active, setActive] = useState("club");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   const [club, setClub] = useState(null);
   const [requests, setRequests] = useState([]);
@@ -1097,11 +1101,142 @@ export default function CoachDashboard() {
               <Icon path={ICONS.refresh} className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} stroke={PRIMARY} width={2} />
               <span className="hidden sm:inline">{refreshing ? "Refreshing…" : "Refresh"}</span>
             </button>
-            <button className="relative text-gray-500" aria-label="Notifications">
-              <Icon path={ICONS.bell} className="w-5 h-5" stroke="#6b7280" width={1.8} />
-              {requests.length > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-bold text-white flex items-center justify-center" style={{ backgroundColor: "#ef4444" }}>{requests.length}</span>}
-            </button>
-            <Avatar name={coachName} url={storageUrl(coach.photo_path) || coach.photo_url} size={36} />
+            <div className="relative">
+              <button
+                className="relative text-gray-500 hover:text-blue-700 transition-colors"
+                aria-label="Notifications"
+                aria-haspopup="true"
+                aria-expanded={notifOpen}
+                title={requests.length > 0 ? `${requests.length} pending student request(s)` : "No pending requests"}
+                onClick={() => setNotifOpen((o) => !o)}>
+                <Icon path={ICONS.bell} className="w-5 h-5" stroke="currentColor" width={1.8} />
+                {requests.length > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-bold text-white flex items-center justify-center" style={{ backgroundColor: "#ef4444" }}>{requests.length}</span>}
+              </button>
+
+              {notifOpen && (
+                <>
+                  {/* Click-away layer */}
+                  <div className="fixed inset-0 z-30" onClick={() => setNotifOpen(false)} />
+                  <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-xl border border-gray-100 z-40 overflow-hidden">
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                      <p className="text-sm font-bold" style={{ color: NAVY }}>Notifications</p>
+                      {requests.length > 0 && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: LIGHT, color: PRIMARY }}>
+                          {requests.length} pending
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="max-h-96 overflow-y-auto">
+                      {!coach.club_id ? (
+                        <p className="px-4 py-8 text-center text-sm text-gray-400">You are not linked to a club yet.</p>
+                      ) : requests.length === 0 ? (
+                        <div className="px-4 py-8 flex flex-col items-center text-center">
+                          <div className="w-12 h-12 rounded-full flex items-center justify-center mb-2" style={{ backgroundColor: LIGHT }}>
+                            <Icon path={ICONS.check} className="w-6 h-6" stroke={PRIMARY} width={1.8} />
+                          </div>
+                          <p className="text-sm text-gray-400">You're all caught up — no pending requests.</p>
+                        </div>
+                      ) : (
+                        requests.map((r) => {
+                          const name = buildName(r.initials, r.name_denoted_by_initials, r.lastname);
+                          return (
+                            <div key={r.id} className="px-4 py-3 border-b border-gray-50 last:border-0">
+                              <div className="flex items-center gap-3">
+                                <Avatar name={name} url={storageUrl(r.photo_path) || r.photo_url} size={38} />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-semibold truncate" style={{ color: NAVY }}>{name}</p>
+                                  <p className="text-xs text-gray-400 truncate">{r.member_id} · {r.email}</p>
+                                </div>
+                              </div>
+                              <p className="text-xs text-gray-400 mt-1 break-words">
+                                Requesting to join {r.requested_club_name || coach.club_name}
+                              </p>
+                              <div className="flex items-center gap-2 mt-2">
+                                <button
+                                  onClick={() => handleApprove(r.id)}
+                                  disabled={actingId === r.id}
+                                  className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white disabled:opacity-50"
+                                  style={{ backgroundColor: "#16a34a" }}>
+                                  <Icon path={ICONS.check} className="w-3.5 h-3.5" stroke="#fff" width={2.5} />
+                                  Approve
+                                </button>
+                                <button
+                                  onClick={() => handleReject(r.id)}
+                                  disabled={actingId === r.id}
+                                  className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-50"
+                                  style={{ backgroundColor: "#fee2e2", color: "#b91c1c" }}>
+                                  <Icon path={ICONS.x} className="w-3.5 h-3.5" stroke="#b91c1c" width={2.5} />
+                                  Reject
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    <button
+                      onClick={() => { setActive("club"); setNotifOpen(false); setSidebarOpen(false); }}
+                      className="w-full px-4 py-2.5 text-xs font-semibold border-t border-gray-100 hover:bg-gray-50 transition"
+                      style={{ color: PRIMARY }}>
+                      Open Dashboard
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="relative">
+              <button
+                onClick={() => setProfileOpen((o) => !o)}
+                aria-haspopup="true"
+                aria-expanded={profileOpen}
+                className="flex items-center gap-2 pl-1 pr-2 py-1 rounded-full hover:bg-gray-100 transition-colors">
+                <Avatar name={coachName} url={storageUrl(coach.photo_path) || coach.photo_url} size={36} />
+                <div className="hidden sm:block text-left leading-tight">
+                  <p className="text-sm font-semibold truncate max-w-[140px]" style={{ color: NAVY }}>{coachName}</p>
+                  <p className="text-[11px] text-gray-400">{coach.member_type || "Coach"}</p>
+                </div>
+                <Icon path={ICONS.chevron} className={`w-4 h-4 transition-transform ${profileOpen ? "rotate-180" : ""}`} stroke="#9ca3af" width={2} />
+              </button>
+
+              {profileOpen && (
+                <>
+                  {/* Click-away layer */}
+                  <div className="fixed inset-0 z-30" onClick={() => setProfileOpen(false)} />
+                  <div className="absolute right-0 top-full mt-2 w-64 max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-xl border border-gray-100 z-40 overflow-hidden">
+                    <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
+                      <Avatar name={coachName} url={storageUrl(coach.photo_path) || coach.photo_url} size={40} />
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold truncate" style={{ color: NAVY }}>{coachName}</p>
+                        <p className="text-xs text-gray-400 truncate">{coach.email || "—"}</p>
+                      </div>
+                    </div>
+                    <div className="py-1">
+                      <button
+                        onClick={() => { setActive("settings"); setProfileOpen(false); setSidebarOpen(false); }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                        <Icon path={ICONS.user} className="w-4 h-4" stroke="#6b7280" width={1.8} />
+                        My Account
+                      </button>
+                      <button
+                        onClick={() => { setActive("settings"); setProfileOpen(false); setSidebarOpen(false); }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                        <Icon path={ICONS.settings} className="w-4 h-4" stroke="#6b7280" width={1.8} />
+                        Settings
+                      </button>
+                    </div>
+                    <button
+                      onClick={handleLogout}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold border-t border-gray-100 hover:bg-red-50 transition-colors"
+                      style={{ color: "#dc2626" }}>
+                      <Icon path={ICONS.logout} className="w-4 h-4" stroke="#dc2626" width={1.8} />
+                      Logout
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </header>
 

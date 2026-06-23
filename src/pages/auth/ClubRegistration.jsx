@@ -30,15 +30,23 @@ const Field = ({ label, required, error, children }) => (
   </div>
 );
 
-const Input = ({ icon, ...props }) => (
+const Input = ({ icon, error, ...props }) => (
   <div className="relative">
     {icon && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">{icon}</span>}
     <input
       {...props}
-      className={`w-full border border-gray-300 rounded-lg py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 placeholder-gray-400 ${icon ? "pl-8 pr-3" : "px-3"}`}
+      className={`w-full border rounded-lg py-2.5 text-sm focus:outline-none focus:ring-2 text-gray-700 placeholder-gray-400 ${
+        error ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500"
+      } ${icon ? "pl-8 pr-3" : "px-3"}`}
     />
   </div>
 );
+
+// Shared select className that turns red when the field has a validation error.
+const selectClass = (error) =>
+  `w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 text-gray-700 ${
+    error ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500"
+  }`;
 
 const emptyCoach = () => ({
   id: Date.now() + Math.random(),
@@ -191,6 +199,10 @@ export default function ClubRegistration() {
 
   // Coaches
   const [coaches, setCoaches] = useState([emptyCoach()]);
+  // Per-coach validation messages: { [coachId]: { field: message, ... } }.
+  const [coachErrors, setCoachErrors] = useState({});
+  // Summary line shown above the wizard nav when a step fails validation.
+  const [navError, setNavError] = useState("");
 
   // ── Genders (category-driven; from GET /api/member-genders) ──
   const [genders, setGenders] = useState([]);
@@ -230,17 +242,26 @@ export default function ClubRegistration() {
     setClubErrors({ ...clubErrors, [e.target.name]: "" });
   };
 
+  // Clear a single coach's field-level error (no-op if there isn't one).
+  const clearCoachError = (id, field) =>
+    setCoachErrors((prev) => {
+      if (!prev[id]?.[field]) return prev;
+      return { ...prev, [id]: { ...prev[id], [field]: "" } };
+    });
+
   const handleCoachChange = (id, field, value) => {
-    setCoaches(coaches.map(c => c.id === id ? { ...c, [field]: value } : c));
+    setCoaches((prev) => prev.map(c => c.id === id ? { ...c, [field]: value } : c));
+    clearCoachError(id, field);
   };
 
   const handleCoachPhoto = (id, file) => {
     if (!file) return;
     if (file.size > 1 * 1024 * 1024) {
-      setCoaches(coaches.map(c => c.id === id ? { ...c, photoError: "Max 1MB", photo: null } : c));
+      setCoaches((prev) => prev.map(c => c.id === id ? { ...c, photoError: "Max 1MB", photo: null } : c));
       return;
     }
-    setCoaches(coaches.map(c => c.id === id ? { ...c, photo: file, photoError: "" } : c));
+    setCoaches((prev) => prev.map(c => c.id === id ? { ...c, photo: file, photoError: "" } : c));
+    clearCoachError(id, "photo");
   };
 
   const addCoach = () => setCoaches([...coaches, emptyCoach()]);
@@ -248,48 +269,63 @@ export default function ClubRegistration() {
   const removeCoach = (id) => {
     if (coaches.length === 1) return;
     setCoaches(coaches.filter(c => c.id !== id));
+    // Drop any stored errors for the removed coach.
+    setCoachErrors((prev) => {
+      if (!prev[id]) return prev;
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
   };
+
+  // Convenience accessor for a coach's field error in JSX.
+  const coachErr = (id, field) => coachErrors[id]?.[field] || "";
 
   const validateClub = () => {
     const errs = {};
-    if (!club.name) errs.name = "Required";
+    if (!club.name.trim()) errs.name = "Required";
     if (!club.year) errs.year = "Required";
-    if (!club.registerNumber) errs.registerNumber = "Required";
-    if (!club.primaryPhone) errs.primaryPhone = "Required";
-    if (!club.address) errs.address = "Required";
+    if (!club.registerNumber.trim()) errs.registerNumber = "Required";
+    if (!club.primaryPhone.trim()) errs.primaryPhone = "Required";
+    if (!club.address.trim()) errs.address = "Required";
     setClubErrors(errs);
     return Object.keys(errs).length === 0;
   };
 
   const validateCoaches = () => {
-    for (let i = 0; i < coaches.length; i++) {
-      const c = coaches[i];
-      if (
-        !c.title ||
-        !c.initials ||
-        !c.nameWithInitials ||
-        !c.lastName ||
-        !c.memberGenderId ||
-        !c.nationalId ||
-        !c.primaryPhone ||
-        !c.address
-      ) {
-        alert("Please fill all required coach fields.");
-        return false;
-      }
-      // The primary coach (index 0) uses the OTP-verified email automatically.
-      // Additional coaches must supply a valid email — no OTP verification needed.
-      if (i > 0 && (!c.email || !c.email.includes("@"))) {
-        alert("Please enter a valid email for every additional coach.");
-        return false;
-      }
-    }
-    return true;
+    const errs = {};
+    coaches.forEach((c, i) => {
+      const e = {};
+      if (!c.title) e.title = "Required";
+      if (!c.initials.trim()) e.initials = "Required";
+      if (!c.nameWithInitials.trim()) e.nameWithInitials = "Required";
+      if (!c.lastName.trim()) e.lastName = "Required";
+      if (!c.memberGenderId) e.memberGenderId = "Required";
+      if (!c.nationalId.trim()) e.nationalId = "Required";
+      if (!c.primaryPhone.trim()) e.primaryPhone = "Required";
+      if (!c.address.trim()) e.address = "Required";
+      // Only the primary coach (index 0) must upload a photo.
+      if (i === 0 && !c.photo) e.photo = "A profile photo is required.";
+      // The primary coach reuses the OTP-verified email; additional coaches
+      // must supply a valid email of their own (no OTP needed).
+      if (i > 0 && (!c.email || !c.email.includes("@")))
+        e.email = "Enter a valid email.";
+      if (Object.keys(e).length) errs[c.id] = e;
+    });
+    setCoachErrors(errs);
+    return Object.keys(errs).length === 0;
   };
 
   const handleNext = () => {
-    if (step === 1 && !validateClub()) return;
-    if (step === 2 && !validateCoaches()) return;
+    if (step === 1 && !validateClub()) {
+      setNavError("Please correct the highlighted fields below.");
+      return;
+    }
+    if (step === 2 && !validateCoaches()) {
+      setNavError("Please correct the highlighted coach fields below.");
+      return;
+    }
+    setNavError("");
     setStep(s => s + 1);
   };
 
@@ -796,11 +832,11 @@ export default function ClubRegistration() {
               <div className="bg-white rounded-xl shadow-sm p-5">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                   <Field label="Club Name" required error={clubErrors.name}>
-                    <Input name="name" value={club.name} onChange={handleClubChange} placeholder="Enter club name" />
+                    <Input name="name" value={club.name} onChange={handleClubChange} placeholder="Enter club name" error={clubErrors.name} />
                   </Field>
                   <Field label="Register Year" required error={clubErrors.year}>
                     <select name="year" value={club.year} onChange={handleClubChange}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700">
+                      className={selectClass(clubErrors.year)}>
                       <option value="">Select year</option>
                       {YEARS.map(y => <option key={y}>{y}</option>)}
                     </select>
@@ -809,10 +845,10 @@ export default function ClubRegistration() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <Field label="Register Number" required error={clubErrors.registerNumber}>
-                    <Input icon="#" name="registerNumber" value={club.registerNumber} onChange={handleClubChange} placeholder="Enter register number" />
+                    <Input icon="#" name="registerNumber" value={club.registerNumber} onChange={handleClubChange} placeholder="Enter register number" error={clubErrors.registerNumber} />
                   </Field>
                   <Field label="Primary Phone Number" required error={clubErrors.primaryPhone}>
-                    <Input icon="📞" name="primaryPhone" value={club.primaryPhone} onChange={handleClubChange} placeholder="Enter primary phone number" />
+                    <Input icon="📞" name="primaryPhone" value={club.primaryPhone} onChange={handleClubChange} placeholder="Enter primary phone number" error={clubErrors.primaryPhone} />
                   </Field>
                   <Field label="Secondary Phone Number">
                     <Input icon="📞" name="secondaryPhone" value={club.secondaryPhone} onChange={handleClubChange} placeholder="Enter secondary phone number" />
@@ -821,7 +857,7 @@ export default function ClubRegistration() {
 
                 <div className="mt-4">
                   <Field label="Address" required error={clubErrors.address}>
-                    <Input name="address" value={club.address} onChange={handleClubChange} placeholder="Sports Complex, University of Sri Jayewardenepura" />
+                    <Input name="address" value={club.address} onChange={handleClubChange} placeholder="Sports Complex, University of Sri Jayewardenepura" error={clubErrors.address} />
                   </Field>
                 </div>
               </div>
@@ -865,7 +901,9 @@ export default function ClubRegistration() {
                     <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
                       {/* Photo */}
                       <div className="flex flex-col items-center gap-2 flex-shrink-0">
-                        <div className="w-16 h-16 rounded-xl overflow-hidden border-2 border-gray-200 bg-gray-100 flex items-center justify-center">
+                        <div className={`w-16 h-16 rounded-xl overflow-hidden border-2 bg-gray-100 flex items-center justify-center ${
+                          coach.photoError || coachErr(coach.id, "photo") ? "border-red-500" : "border-gray-200"
+                        }`}>
                           {coach.photo ? (
                             <img src={URL.createObjectURL(coach.photo)} alt="" className="w-full h-full object-cover" />
                           ) : (
@@ -879,46 +917,45 @@ export default function ClubRegistration() {
                           <input type="file" accept=".png,.jpg,.jpeg" className="hidden"
                             onChange={e => handleCoachPhoto(coach.id, e.target.files[0])} />
                         </label>
-                        {idx === 0 && (
-                          <span className="text-[10px] font-medium text-gray-400">
-                            Required <span className="text-red-500">*</span>
-                          </span>
+                        {(coach.photoError || coachErr(coach.id, "photo")) && (
+                          <p className="text-xs text-red-500 text-center">
+                            {coach.photoError || coachErr(coach.id, "photo")}
+                          </p>
                         )}
-                        {coach.photoError && <p className="text-xs text-red-500">{coach.photoError}</p>}
                       </div>
 
                       {/* Fields */}
                       <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                        <Field label="Title" required>
+                        <Field label="Title" required error={coachErr(coach.id, "title")}>
                           <select
                             value={coach.title}
                             onChange={e => handleCoachChange(coach.id, "title", e.target.value)}
-                            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+                            className={selectClass(coachErr(coach.id, "title"))}
                           >
                             <option value="">-- Select --</option>
                             {TITLE_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
                           </select>
                         </Field>
-                        <Field label="Initials" required>
-                          <Input value={coach.initials} onChange={e => handleCoachChange(coach.id, "initials", e.target.value)} placeholder="N.P." />
+                        <Field label="Initials" required error={coachErr(coach.id, "initials")}>
+                          <Input value={coach.initials} onChange={e => handleCoachChange(coach.id, "initials", e.target.value)} placeholder="N.P." error={coachErr(coach.id, "initials")} />
                         </Field>
-                        <Field label="Name Denoted by Initials" required>
-                          <Input value={coach.nameWithInitials} onChange={e => handleCoachChange(coach.id, "nameWithInitials", e.target.value)} placeholder="Nimal Perera" />
+                        <Field label="Name Denoted by Initials" required error={coachErr(coach.id, "nameWithInitials")}>
+                          <Input value={coach.nameWithInitials} onChange={e => handleCoachChange(coach.id, "nameWithInitials", e.target.value)} placeholder="Nimal Perera" error={coachErr(coach.id, "nameWithInitials")} />
                         </Field>
-                        <Field label="Last Name" required>
-                          <Input value={coach.lastName} onChange={e => handleCoachChange(coach.id, "lastName", e.target.value)} placeholder="Perera" />
+                        <Field label="Last Name" required error={coachErr(coach.id, "lastName")}>
+                          <Input value={coach.lastName} onChange={e => handleCoachChange(coach.id, "lastName", e.target.value)} placeholder="Perera" error={coachErr(coach.id, "lastName")} />
                         </Field>
-                        <Field label="Gender" required>
+                        <Field label="Gender" required error={coachErr(coach.id, "memberGenderId")}>
                           <select
                             value={coach.memberGenderId}
                             onChange={e => handleCoachChange(coach.id, "memberGenderId", e.target.value)}
-                            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+                            className={selectClass(coachErr(coach.id, "memberGenderId"))}
                           >
                             <option value="">-- Select --</option>
                             {genders.map(g => <option key={g.category_id} value={g.category_id}>{g.description}</option>)}
                           </select>
                         </Field>
-                        <Field label="Email" required>
+                        <Field label="Email" required error={idx === 0 ? "" : coachErr(coach.id, "email")}>
                           {idx === 0 ? (
                             <Input
                               icon="📧"
@@ -935,14 +972,15 @@ export default function ClubRegistration() {
                               value={coach.email}
                               onChange={e => handleCoachChange(coach.id, "email", e.target.value)}
                               placeholder="coach@example.com"
+                              error={coachErr(coach.id, "email")}
                             />
                           )}
                         </Field>
-                        <Field label="National ID Number" required>
-                          <Input value={coach.nationalId} onChange={e => handleCoachChange(coach.id, "nationalId", e.target.value)} placeholder="812345678V" />
+                        <Field label="National ID Number" required error={coachErr(coach.id, "nationalId")}>
+                          <Input value={coach.nationalId} onChange={e => handleCoachChange(coach.id, "nationalId", e.target.value)} placeholder="812345678V" error={coachErr(coach.id, "nationalId")} />
                         </Field>
-                        <Field label="Primary Phone" required>
-                          <Input icon="📞" value={coach.primaryPhone} onChange={e => handleCoachChange(coach.id, "primaryPhone", e.target.value)} placeholder="077 123 4567" />
+                        <Field label="Primary Phone" required error={coachErr(coach.id, "primaryPhone")}>
+                          <Input icon="📞" value={coach.primaryPhone} onChange={e => handleCoachChange(coach.id, "primaryPhone", e.target.value)} placeholder="077 123 4567" error={coachErr(coach.id, "primaryPhone")} />
                         </Field>
                         <Field label="Secondary Phone">
                           <Input icon="📞" value={coach.secondaryPhone} onChange={e => handleCoachChange(coach.id, "secondaryPhone", e.target.value)} placeholder="Enter secondary phone number" />
@@ -953,8 +991,8 @@ export default function ClubRegistration() {
                             className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700" />
                         </Field>
                         <div className="sm:col-span-2 lg:col-span-3">
-                          <Field label="Address" required>
-                            <Input value={coach.address} onChange={e => handleCoachChange(coach.id, "address", e.target.value)} placeholder="123, Lake View Road, Nugegoda" />
+                          <Field label="Address" required error={coachErr(coach.id, "address")}>
+                            <Input value={coach.address} onChange={e => handleCoachChange(coach.id, "address", e.target.value)} placeholder="123, Lake View Road, Nugegoda" error={coachErr(coach.id, "address")} />
                           </Field>
                         </div>
                       </div>
@@ -979,6 +1017,13 @@ export default function ClubRegistration() {
               <p className="text-xs text-gray-400 mb-4 text-center">Review your details before proceeding.</p>
               <SummaryPanel />
             </div>
+          )}
+
+          {/* Validation summary for the current step */}
+          {navError && step < 3 && (
+            <p className={`text-sm text-red-500 mt-4 ${step === 3 ? "max-w-2xl mx-auto" : ""}`}>
+              {navError}
+            </p>
           )}
 
           {/* Bottom nav */}

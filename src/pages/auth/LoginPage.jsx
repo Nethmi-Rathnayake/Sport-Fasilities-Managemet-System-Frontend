@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import EmailStep from "../../components/auth/EmailStep";
 import OtpStep from "../../components/auth/OtpStep";
@@ -20,8 +20,12 @@ function rolePlaceholderMessage(role) {
 }
 
 export default function LoginPage() {
+  const location = useLocation();
+  // The home-page login card hands off the typed email via router state so the
+  // EmailStep field is prefilled here.
+  const initialEmail = location.state?.email || "";
   const [step, setStep] = useState("email");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initialEmail);
   // Placeholder message shown after a registered user verifies their OTP.
   const [loginMessage, setLoginMessage] = useState("");
   // Set when the verified email has no account — we ask them to register
@@ -237,7 +241,7 @@ export default function LoginPage() {
       {/* Card */}
       <div className="w-full max-w-sm">
         {step === "email"
-          ? <EmailStep onSend={handleSendOtp} beforeSend={handleBeforeSend} />
+          ? <EmailStep initialEmail={initialEmail} onSend={handleSendOtp} beforeSend={handleBeforeSend} />
           : <OtpStep email={email} onVerify={handleVerify} onResend={() => sendOtp(email)} />
         }
 

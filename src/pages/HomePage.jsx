@@ -133,6 +133,63 @@ const SectionHeading = ({ eyebrow, title, subtitle, light = false }) => (
   </div>
 );
 
+// Quick-access login card shown in the home hero. It's a lightweight entry point
+// to the email-OTP flow: the user types their email here and we hand off to the
+// full /login flow (carrying the email through router state so EmailStep prefills).
+const LoginCard = ({ navigate }) => {
+  const [email, setEmail] = useState("");
+
+  const submit = (e) => {
+    e.preventDefault();
+    navigate("/login", { state: { email: email.trim() } });
+  };
+
+  return (
+    <div className="bg-white rounded-2xl shadow-2xl p-7">
+      <div className="flex items-center gap-3 mb-5">
+        <img src={logo} alt="USJ" className="w-11 h-11 object-contain flex-shrink-0" />
+        <div>
+          <p className="font-bold text-sm leading-tight" style={{ color: NAVY }}>Member Sign In</p>
+          <p className="text-xs" style={{ color: BLUE }}>Sports Facility Portal</p>
+        </div>
+      </div>
+
+      <p className="text-sm text-gray-500 mb-5 leading-relaxed">
+        Enter your email to receive a one-time passcode (OTP) and access your account.
+      </p>
+
+      <form onSubmit={submit}>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="example@sjp.ac.lk"
+          className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3"
+        />
+        <button
+          type="submit"
+          disabled={!email.includes("@")}
+          className="w-full text-white font-semibold py-2.5 rounded-lg text-sm transition-colors disabled:opacity-50"
+          style={{ backgroundColor: BLUE }}
+          onMouseEnter={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.backgroundColor = BLUE_HOVER; }}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = BLUE)}>
+          Continue with OTP
+        </button>
+      </form>
+
+      <div className="text-center mt-5">
+        <p className="text-sm text-gray-500">
+          New here?{" "}
+          <button onClick={() => navigate("/select-registration")} className="font-semibold hover:underline" style={{ color: BLUE }}>
+            Register
+          </button>
+        </p>
+      </div>
+    </div>
+  );
+};
+
 // Compact hero used on every sub-tab (About / Facilities / Membership / How It Works).
 const PageHero = ({ eyebrow, title, subtitle, primaryCta, onPrimary }) => (
   <section className="relative overflow-hidden min-h-[340px] sm:min-h-[380px]">
@@ -160,27 +217,34 @@ function HomeTab({ navigate }) {
   return (
     <>
       {/* HERO */}
-      <section className="relative overflow-hidden min-h-[480px] sm:min-h-[520px] lg:h-[560px]">
+      <section className="relative overflow-hidden min-h-[480px] sm:min-h-[560px] lg:min-h-[600px]">
         <img src={poolImg} alt="Swimming Pool" className="absolute inset-0 w-full h-full object-cover" />
-        <div className="absolute inset-0" style={{ background: "linear-gradient(90deg, rgba(7,20,45,0.95) 0%, rgba(7,20,45,0.88) 35%, rgba(7,20,45,0.55) 60%, rgba(7,20,45,0.05) 100%)" }} />
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 h-full flex items-center py-20 lg:py-0">
-          <div className="max-w-xl mt-10">
-            <p className="text-sm font-semibold tracking-widest mb-4" style={{ color: "#60a5fa" }}>WELCOME TO</p>
-            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold text-white leading-tight">
-              Sports Facility<br />Management &<br />Access Control System
-            </h1>
-            <p className="mt-5 text-base leading-relaxed" style={{ color: "rgba(255,255,255,0.75)" }}>
-              A smart, secure and centralized platform to manage sports facilities, memberships, bookings, access and payments for a better sports experience.
-            </p>
-            <div className="flex flex-wrap gap-4 mt-8">
-              <button onClick={() => navigate("/login")} className="flex items-center gap-3 px-6 py-3 rounded-xl text-white" style={{ backgroundColor: "#2563eb" }}>
-                <SvgIcon path="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" className="w-5 h-5" width={2} />
-                <div className="text-left"><div className="font-semibold">Sign In</div><div className="text-xs opacity-80">Access your account</div></div>
-              </button>
-              <button onClick={() => navigate("/select-registration")} className="flex items-center gap-3 px-6 py-3 rounded-xl border border-white/40 text-white bg-white/10 backdrop-blur-sm">
-                <SvgIcon path="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" className="w-5 h-5" width={2} />
-                <div className="text-left"><div className="font-semibold">Register</div><div className="text-xs opacity-80">Create a new account</div></div>
-              </button>
+        <div className="absolute inset-0" style={{ background: "linear-gradient(90deg, rgba(7,20,45,0.95) 0%, rgba(7,20,45,0.88) 35%, rgba(7,20,45,0.55) 60%, rgba(7,20,45,0.15) 100%)" }} />
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 min-h-[480px] sm:min-h-[560px] lg:min-h-[600px] flex items-center py-24 lg:py-20">
+          <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+            <div className="max-w-xl">
+              <p className="text-sm font-semibold tracking-widest mb-4" style={{ color: "#60a5fa" }}>WELCOME TO</p>
+              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold text-white leading-tight">
+                Sports Facility<br />Management &<br />Access Control System
+              </h1>
+              <p className="mt-5 text-base leading-relaxed" style={{ color: "rgba(255,255,255,0.75)" }}>
+                A smart, secure and centralized platform to manage sports facilities, memberships, bookings, access and payments for a better sports experience.
+              </p>
+              <div className="flex flex-wrap gap-4 mt-8">
+                <button onClick={() => navigate("/login")} className="flex items-center gap-3 px-6 py-3 rounded-xl text-white" style={{ backgroundColor: "#2563eb" }}>
+                  <SvgIcon path="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" className="w-5 h-5" width={2} />
+                  <div className="text-left"><div className="font-semibold">Sign In</div><div className="text-xs opacity-80">Access your account</div></div>
+                </button>
+                <button onClick={() => navigate("/select-registration")} className="flex items-center gap-3 px-6 py-3 rounded-xl border border-white/40 text-white bg-white/10 backdrop-blur-sm">
+                  <SvgIcon path="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" className="w-5 h-5" width={2} />
+                  <div className="text-left"><div className="font-semibold">Register</div><div className="text-xs opacity-80">Create a new account</div></div>
+                </button>
+              </div>
+            </div>
+
+            {/* LOGIN CARD */}
+            <div className="lg:justify-self-end w-full max-w-sm">
+              <LoginCard navigate={navigate} />
             </div>
           </div>
         </div>

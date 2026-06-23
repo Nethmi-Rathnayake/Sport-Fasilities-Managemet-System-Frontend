@@ -5,8 +5,8 @@ import toast from "react-hot-toast";
 // `beforeSend` (optional): async (email) => boolean. Runs before the OTP is
 // sent; return false to abort (e.g. the email isn't registered). The login page
 // uses it to block unregistered emails and prompt them to register instead.
-export default function EmailStep({ onSend, beforeSend }) {
-  const [email, setEmail] = useState("");
+export default function EmailStep({ onSend, beforeSend, initialEmail = "" }) {
+  const [email, setEmail] = useState(initialEmail);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -77,13 +77,6 @@ export default function EmailStep({ onSend, beforeSend }) {
           {loading ? "Sending…" : "Send OTP"}
         </button>
       </form>
-
-      <p className="flex items-center justify-center gap-1.5 text-xs text-gray-400 mt-4">
-        <svg className="w-3.5 h-3.5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        Passwordless login. No password required.
-      </p>
     </div>
   );
 }

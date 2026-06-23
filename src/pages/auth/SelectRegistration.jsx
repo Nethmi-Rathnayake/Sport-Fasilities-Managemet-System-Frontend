@@ -45,10 +45,6 @@ export default function SelectRegistration() {
               {email}
             </p>
           )}
-          <p className="text-center text-gray-500 text-sm mb-6">
-            Choose how you'd like to register
-          </p>
-
           <div className="flex flex-col gap-3">
             <button
               onClick={goToStudent}

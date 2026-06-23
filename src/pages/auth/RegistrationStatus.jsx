@@ -364,27 +364,19 @@ export default function RegistrationStatus() {
                     </div>
                     <div>
                       <label className={editLabelClass}>Gender</label>
-                      <div className="flex flex-wrap gap-2">
-                        {genders.map((g) => {
-                          const selected = String(form.memberGenderId) === String(g.category_id);
-                          return (
-                            <button
-                              type="button"
-                              key={g.category_id}
-                              onClick={() =>
-                                setForm((f) => ({ ...f, memberGenderId: String(g.category_id) }))
-                              }
-                              className={`px-3 py-2 rounded-lg text-sm font-medium border transition ${
-                                selected
-                                  ? "bg-blue-700 border-blue-700 text-white"
-                                  : "bg-white border-gray-200 text-gray-700 hover:border-blue-300"
-                              }`}
-                            >
-                              {g.description}
-                            </button>
-                          );
-                        })}
-                      </div>
+                      <select
+                        name="memberGenderId"
+                        value={form.memberGenderId}
+                        onChange={handleChange}
+                        className={editInputClass}
+                      >
+                        <option value="">Select…</option>
+                        {genders.map((g) => (
+                          <option key={g.category_id} value={String(g.category_id)}>
+                            {g.description}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                     <div>
                       <label className={editLabelClass}>Student NIC / Guardian NIC</label>

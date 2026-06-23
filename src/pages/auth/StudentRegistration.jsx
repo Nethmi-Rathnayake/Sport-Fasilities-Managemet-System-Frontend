@@ -69,6 +69,10 @@ export default function StudentRegistration() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  // Per-field validation messages, keyed by the form field name (plus the
+  // pseudo-fields "membershipType" and "club"). A non-empty value drives both
+  // the red outline on the field and the inline message rendered beneath it.
+  const [fieldErrors, setFieldErrors] = useState({});
 
   // ── Photo preview URL (memoized to avoid blob leak on every render) ──
   const photoPreviewUrl = useMemo(
@@ -224,8 +228,12 @@ export default function StudentRegistration() {
     }
   };
 
-  const handleFormChange = (e) =>
-    setForm({ ...form, [e.target.name]: e.target.value });
+  const handleFormChange = (e) => {
+    const { name, value } = e.target;
+    setForm((f) => ({ ...f, [name]: value }));
+    // Clear this field's error as soon as the user starts correcting it.
+    setFieldErrors((fe) => (fe[name] ? { ...fe, [name]: "" } : fe));
+  };
 
   const handlePhotoChange = (e) => {
     const file = e.target.files[0];
@@ -236,43 +244,54 @@ export default function StudentRegistration() {
       return;
     }
     setPhotoError("");
+    setFieldErrors((fe) => (fe.photo ? { ...fe, photo: "" } : fe));
     setPhotoFile(file);
   };
 
   // Sri Lankan phone validation: 07X XXXXXXX (10 digits starting with 07)
   const isValidPhone = (phone) => /^0[1-9]\d{8}$/.test(phone.replace(/\s/g, ""));
 
-  // Validate everything collected on Tab 1. Returns "" when valid,
-  // otherwise the first user-facing error message.
+  // Validate everything collected on Tab 1. Returns a map of
+  // field-name → message (empty map means valid). The photo lives outside
+  // `form`, so its message is tracked under the "photo" key and mirrored into
+  // `photoError` so it renders in the photo block.
   const validateDetails = () => {
-    if (!photoFile) return "Please upload your profile photo.";
-    if (!form.title) return "Please select a title.";
-    if (!form.initials.trim()) return "Please enter your initials.";
+    const errs = {};
+    if (!photoFile) errs.photo = "Please upload your profile photo.";
+    if (!form.title) errs.title = "Please select a title.";
+    if (!form.initials.trim()) errs.initials = "Please enter your initials.";
     if (!form.nameWithInitials.trim())
-      return "Please enter the name denoted by your initials.";
-    if (!form.lastName.trim()) return "Please enter your last name.";
-    if (!form.memberGenderId) return "Please select your gender.";
-    if (!form.primaryPhone.trim()) return "Please enter your primary phone.";
-    if (!isValidPhone(form.primaryPhone))
-      return "Enter a valid primary phone number (e.g. 071 234 5678).";
+      errs.nameWithInitials = "Please enter the name denoted by your initials.";
+    if (!form.lastName.trim()) errs.lastName = "Please enter your last name.";
+    if (!form.memberGenderId) errs.memberGenderId = "Please select your gender.";
+    if (!form.primaryPhone.trim())
+      errs.primaryPhone = "Please enter your primary phone.";
+    else if (!isValidPhone(form.primaryPhone))
+      errs.primaryPhone = "Enter a valid primary phone number (e.g. 071 234 5678).";
     if (form.secondaryPhone && !isValidPhone(form.secondaryPhone))
-      return "Enter a valid secondary phone number or leave it empty.";
-    if (!form.address.trim()) return "Please enter your address.";
-    if (!membershipType) return "Please select a membership type.";
+      errs.secondaryPhone = "Enter a valid secondary phone number or leave it empty.";
+    if (!form.address.trim()) errs.address = "Please enter your address.";
+    if (!membershipType) errs.membershipType = "Please select a membership type.";
     if (membershipType === "club" && !selectedClub)
-      return "Please select a club.";
-    return "";
+      errs.club = "Please select a club.";
+    return errs;
+  };
+
+  // Push a validation result into state: field outlines/messages via
+  // `fieldErrors`, the photo message via `photoError`, and a single summary
+  // line above the action button. Returns true when the form is valid.
+  const applyValidation = (errs) => {
+    setFieldErrors(errs);
+    setPhotoError(errs.photo || "");
+    const valid = Object.keys(errs).length === 0;
+    setSubmitError(valid ? "" : "Please correct the highlighted fields below.");
+    return valid;
   };
 
   // Tab 1 → Tab 2. Block on validation so the summary only ever shows
   // data the backend will accept.
   const handleNext = () => {
-    const error = validateDetails();
-    if (error) {
-      setSubmitError(error);
-      return;
-    }
-    setSubmitError("");
+    if (!applyValidation(validateDetails())) return;
     setStep("summary");
   };
 
@@ -286,9 +305,8 @@ export default function StudentRegistration() {
   const handleSubmit = async () => {
     // Final guard — the user can only reach here via a validated Tab 1,
     // but re-check in case state was edited.
-    const error = validateDetails();
-    if (error) {
-      setSubmitError(error);
+    const errs = validateDetails();
+    if (!applyValidation(errs)) {
       setStep("details");
       return;
     }
@@ -663,6 +681,22 @@ export default function StudentRegistration() {
   // ══════════════════════════════════════════
   const inputClass =
     "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500";
+  // Base (border/ring colours omitted) so the error/normal state can supply
+  // them without Tailwind class-ordering ambiguity.
+  const inputBase =
+    "w-full rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2";
+  // Field className that turns red when the named field has a validation error.
+  const fieldClass = (name) =>
+    `${inputBase} ${
+      fieldErrors[name]
+        ? "border border-red-500 focus:ring-red-500"
+        : "border border-gray-300 focus:ring-blue-500"
+    }`;
+  // Inline error message rendered directly beneath a field.
+  const fieldError = (name) =>
+    fieldErrors[name] ? (
+      <p className="text-xs text-red-500 mt-1">{fieldErrors[name]}</p>
+    ) : null;
   const labelClass = "block text-sm font-medium text-gray-700 mb-1";
   const required = <span className="text-red-500">*</span>;
 
@@ -768,7 +802,11 @@ export default function StudentRegistration() {
                 Profile Photo {required}
               </h2>
               <div className="flex flex-row items-center gap-4">
-                <div className="w-24 h-28 rounded-lg overflow-hidden border-2 border-gray-200 bg-gray-100 flex items-center justify-center flex-shrink-0">
+                <div
+                  className={`w-24 h-28 rounded-lg overflow-hidden border-2 bg-gray-100 flex items-center justify-center flex-shrink-0 ${
+                    photoError ? "border-red-500" : "border-gray-200"
+                  }`}
+                >
                   {photoPreviewUrl ? (
                     <img
                       src={photoPreviewUrl}
@@ -847,7 +885,7 @@ export default function StudentRegistration() {
                     name="title"
                     value={form.title}
                     onChange={handleFormChange}
-                    className={`${inputClass} text-gray-700`}
+                    className={`${fieldClass("title")} text-gray-700`}
                   >
                     <option value="">-- Select --</option>
                     {TITLE_OPTIONS.map((t) => (
@@ -856,6 +894,7 @@ export default function StudentRegistration() {
                       </option>
                     ))}
                   </select>
+                  {fieldError("title")}
                 </div>
 
                 <div>
@@ -865,8 +904,9 @@ export default function StudentRegistration() {
                     value={form.initials}
                     onChange={handleFormChange}
                     placeholder="T.N."
-                    className={inputClass}
+                    className={fieldClass("initials")}
                   />
+                  {fieldError("initials")}
                 </div>
 
                 <div>
@@ -876,8 +916,9 @@ export default function StudentRegistration() {
                     value={form.lastName}
                     onChange={handleFormChange}
                     placeholder="Perera"
-                    className={inputClass}
+                    className={fieldClass("lastName")}
                   />
+                  {fieldError("lastName")}
                 </div>
 
                 {/* Row 2 — Name Denoted by Initials (2 cols) · Gender */}
@@ -890,8 +931,9 @@ export default function StudentRegistration() {
                     value={form.nameWithInitials}
                     onChange={handleFormChange}
                     placeholder="Tharindu Nimesh"
-                    className={inputClass}
+                    className={fieldClass("nameWithInitials")}
                   />
+                  {fieldError("nameWithInitials")}
                 </div>
 
                 <div>
@@ -900,7 +942,7 @@ export default function StudentRegistration() {
                     name="memberGenderId"
                     value={form.memberGenderId}
                     onChange={handleFormChange}
-                    className={`${inputClass} text-gray-700`}
+                    className={`${fieldClass("memberGenderId")} text-gray-700`}
                   >
                     <option value="">-- Select --</option>
                     {genders.map((g) => (
@@ -909,6 +951,7 @@ export default function StudentRegistration() {
                       </option>
                     ))}
                   </select>
+                  {fieldError("memberGenderId")}
                 </div>
 
                 {/* Row 3 — Email (2 cols) · Student ID or Guardian ID */}
@@ -956,8 +999,9 @@ export default function StudentRegistration() {
                     value={form.primaryPhone}
                     onChange={handleFormChange}
                     placeholder="071 234 5678"
-                    className={inputClass}
+                    className={fieldClass("primaryPhone")}
                   />
+                  {fieldError("primaryPhone")}
                 </div>
 
                 <div>
@@ -969,8 +1013,9 @@ export default function StudentRegistration() {
                     value={form.secondaryPhone}
                     onChange={handleFormChange}
                     placeholder="077 234 5678"
-                    className={inputClass}
+                    className={fieldClass("secondaryPhone")}
                   />
+                  {fieldError("secondaryPhone")}
                 </div>
 
                 {/* Row 5 — Address (full width) */}
@@ -981,8 +1026,9 @@ export default function StudentRegistration() {
                     value={form.address}
                     onChange={handleFormChange}
                     placeholder="No. 1, Main Street, Colombo"
-                    className={inputClass}
+                    className={fieldClass("address")}
                   />
+                  {fieldError("address")}
                 </div>
               </div>
             </div>
@@ -1005,7 +1051,10 @@ export default function StudentRegistration() {
                     name="membershipType"
                     value="club"
                     checked={membershipType === "club"}
-                    onChange={(e) => setMembershipType(e.target.value)}
+                    onChange={(e) => {
+                      setMembershipType(e.target.value);
+                      setFieldErrors((fe) => ({ ...fe, membershipType: "" }));
+                    }}
                     className="mt-0.5 accent-blue-600"
                   />
                   <div>
@@ -1034,6 +1083,11 @@ export default function StudentRegistration() {
                     onChange={(e) => {
                       setMembershipType(e.target.value);
                       setSelectedClub("");
+                      setFieldErrors((fe) => ({
+                        ...fe,
+                        membershipType: "",
+                        club: "",
+                      }));
                     }}
                     className="mt-0.5 accent-blue-600"
                   />
@@ -1048,6 +1102,7 @@ export default function StudentRegistration() {
                   </div>
                 </label>
               </div>
+              {fieldError("membershipType")}
             </div>
 
             {/* Club Selection */}
@@ -1061,9 +1116,14 @@ export default function StudentRegistration() {
                 ) : (
                   <select
                     value={selectedClub}
-                    onChange={(e) => setSelectedClub(e.target.value)}
+                    onChange={(e) => {
+                      setSelectedClub(e.target.value);
+                      setFieldErrors((fe) =>
+                        fe.club ? { ...fe, club: "" } : fe
+                      );
+                    }}
                     disabled={clubsLoading}
-                    className={`${inputClass} md:max-w-sm text-gray-700 disabled:bg-gray-50 disabled:text-gray-400`}
+                    className={`${fieldClass("club")} md:max-w-sm text-gray-700 disabled:bg-gray-50 disabled:text-gray-400`}
                   >
                     <option value="">
                       {clubsLoading ? "Loading clubs..." : "-- Select a Club --"}
@@ -1075,6 +1135,7 @@ export default function StudentRegistration() {
                     ))}
                   </select>
                 )}
+                {fieldError("club")}
                 <p className="text-xs text-gray-400 mt-1.5">
                   Your registration will be reviewed by the club and admin.
                 </p>
