@@ -1,20 +1,17 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import toast from "react-hot-toast";
 import logo from "../../assets/usjp-logo__1_-removebg-preview.png";
-import { getMember, updateMember } from "../../services/memberService";
-import api, { storageUrl } from "../../services/api";
+import { getMember } from "../../services/memberService";
+import { storageUrl } from "../../services/api";
 
 // Shown after an ALREADY-REGISTERED member verifies their OTP but has NOT yet
-// paid. They can't enter a dashboard, so we show a read-only summary of the
+// paid. They can't enter a dashboard, so we show a READ-ONLY summary of the
 // details they submitted plus where they are in the registration workflow.
+// Details can be viewed but not edited until payment is complete.
 //
 // The basic member payload comes from /verify-otp via navigation state; we then
 // fetch the full record (phones, address, NIC, photo, processes) from
 // GET /api/members/{id} so every submitted field is visible.
-
-// Title options — kept in sync with the registration forms (StudentRegistration / ClubRegistration).
-const TITLE_OPTIONS = ["Mr", "Mrs", "Ms", "Miss", "Dr", "Rev."];
 
 const buildName = (initials, denoted, lastname) => {
   const lead = String(initials || denoted || "").trim();
@@ -29,11 +26,6 @@ const fmtDate = (v) => {
 };
 
 const isPaid = (m) => String(m?.payment_status || "").toLowerCase().includes("paid");
-
-// Shared field styling for the inline edit form.
-const editLabelClass = "block text-xs font-medium text-gray-500 mb-1";
-const editInputClass =
-  "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500";
 
 const statusColor = (status) => {
   const s = String(status || "").toLowerCase();
@@ -83,38 +75,10 @@ export default function RegistrationStatus() {
   const [member, setMember] = useState(initial);
   const [loading, setLoading] = useState(Boolean(initial?.id));
 
-  // ── Edit-mode state ───────────────────────────────────────────────────────
-  const [editing, setEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [formError, setFormError] = useState("");
-  const [genders, setGenders] = useState([]);
-  const [photoPreview, setPhotoPreview] = useState(null);
-  const [photoFile, setPhotoFile] = useState(null);
-  const [form, setForm] = useState({
-    title: "",
-    initials: "",
-    nameWithInitials: "",
-    lastName: "",
-    memberGenderId: "",
-    nic: "",
-    dob: "",
-    primaryPhone: "",
-    secondaryPhone: "",
-    address: "",
-  });
-
   // No member in state (e.g. page opened directly) → back to login.
   useEffect(() => {
     if (!initial) navigate("/login", { replace: true });
   }, [initial, navigate]);
-
-  // Gender options for the edit form (category-driven; GET /api/member-genders).
-  useEffect(() => {
-    api
-      .get("/api/member-genders")
-      .then((r) => setGenders(Array.isArray(r.data) ? r.data : []))
-      .catch(() => setGenders([]));
-  }, []);
 
   // Enrich the basic payload with the full submitted record.
   useEffect(() => {
@@ -150,97 +114,6 @@ export default function RegistrationStatus() {
   }, [isClubStudent, clubVerified, paid]);
 
   if (!member) return null;
-
-  // Enter edit mode — seed the form from the current member record.
-  const beginEdit = () => {
-    setForm({
-      title: member.title || "",
-      initials: member.initials || "",
-      nameWithInitials: member.name_denoted_by_initials || "",
-      lastName: member.lastname || "",
-      memberGenderId: member.member_gender_id ? String(member.member_gender_id) : "",
-      nic: member.nic_number || "",
-      dob: member.date_of_birth ? String(member.date_of_birth).slice(0, 10) : "",
-      primaryPhone: member.primary_phone_number || "",
-      secondaryPhone: member.secondary_phone_number || "",
-      address: member.address || "",
-    });
-    setPhotoPreview(null);
-    setPhotoFile(null);
-    setFormError("");
-    setEditing(true);
-  };
-
-  const cancelEdit = () => {
-    setEditing(false);
-    setFormError("");
-    setPhotoPreview(null);
-    setPhotoFile(null);
-  };
-
-  const handleChange = (e) =>
-    setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
-
-  const handlePhoto = (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setPhotoFile(file);
-      setPhotoPreview(URL.createObjectURL(file));
-    }
-  };
-
-  // Save — persists the edited details to the backend
-  // (PUT /api/members/{id}, via updateMember). On success the returned record
-  // is merged into state so the view reflects exactly what was stored.
-  const handleSave = async () => {
-    if (
-      !form.title.trim() ||
-      !form.initials.trim() ||
-      !form.nameWithInitials.trim() ||
-      !form.lastName.trim() ||
-      !form.memberGenderId ||
-      !form.nic.trim() ||
-      !form.primaryPhone.trim() ||
-      !form.address.trim()
-    ) {
-      setFormError("Please fill in all required fields.");
-      return;
-    }
-
-    const fd = new FormData();
-    fd.append("title", form.title.trim());
-    fd.append("initials", form.initials.trim());
-    fd.append("name_denoted_by_initials", form.nameWithInitials.trim());
-    fd.append("lastname", form.lastName.trim());
-    fd.append("member_gender_id", form.memberGenderId);
-    fd.append("nic", form.nic.trim());
-    fd.append("date_of_birth", form.dob || "");
-    fd.append("primary_phone", form.primaryPhone.trim());
-    fd.append("secondary_phone", form.secondaryPhone.trim());
-    fd.append("address", form.address.trim());
-    if (photoFile) fd.append("photo", photoFile);
-
-    setSaving(true);
-    setFormError("");
-    try {
-      const { message, ...updated } = (await updateMember(member.id, fd)) || {};
-      setMember((prev) => ({ ...prev, ...updated }));
-      setEditing(false);
-      setPhotoPreview(null);
-      setPhotoFile(null);
-      toast.success(message || "Your details have been updated.");
-    } catch (err) {
-      const data = err?.response?.data;
-      const firstError = data?.errors
-        ? Object.values(data.errors)[0]?.[0]
-        : null;
-      const msg = firstError || data?.message || "Could not save your changes. Please try again.";
-      setFormError(msg);
-      toast.error(msg);
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const name = buildName(member.initials, member.name_denoted_by_initials, member.lastname);
   const photoUrl = storageUrl(member.photo_path) || member.photo_url || null;
@@ -303,142 +176,47 @@ export default function RegistrationStatus() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Submitted details */}
+          {/* Submitted details (read-only) */}
           <div className="lg:col-span-2 bg-white rounded-2xl shadow-lg p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-bold text-sm text-gray-900">Your Submitted Details</h2>
-              {!loading && !editing && (
-                <button
-                  onClick={beginEdit}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-700 hover:text-blue-800 border border-blue-200 hover:border-blue-300 rounded-lg px-3 py-1.5 transition"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                  Edit
-                </button>
-              )}
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-400">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                View only
+              </span>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-6">
               <div className="flex-shrink-0 mx-auto sm:mx-0">
                 <div className="w-32 h-36 rounded-xl overflow-hidden border-2 border-gray-200 bg-gray-100 flex items-center justify-center">
-                  {photoPreview || photoUrl ? (
-                    <img src={photoPreview || photoUrl} alt={name} className="w-full h-full object-cover" />
+                  {photoUrl ? (
+                    <img src={photoUrl} alt={name} className="w-full h-full object-cover" />
                   ) : (
                     <span className="text-xs text-gray-300">No photo</span>
                   )}
                 </div>
                 <p className="text-xs text-gray-400 text-center mt-2">Profile Photo</p>
-                {editing && (
-                  <label className="block mt-2 text-center text-xs font-semibold text-blue-700 hover:text-blue-800 cursor-pointer">
-                    Change photo
-                    <input type="file" accept="image/*" onChange={handlePhoto} className="hidden" />
-                  </label>
-                )}
               </div>
 
-              {editing ? (
-                <div className="flex-1">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className={editLabelClass}>Title</label>
-                      <select name="title" value={form.title} onChange={handleChange} className={editInputClass}>
-                        <option value="">Select…</option>
-                        {TITLE_OPTIONS.map((t) => (
-                          <option key={t} value={t}>{t}</option>
-                        ))}
-                      </select>
+              <dl className="flex-1 divide-y divide-gray-100">
+                {loading ? (
+                  <p className="text-sm text-gray-400 py-6">Loading your details…</p>
+                ) : (
+                  rows.map(([label, value]) => (
+                    <div key={label} className="py-2.5 grid grid-cols-1 sm:grid-cols-3 gap-1">
+                      <dt className="text-xs font-medium text-gray-400">{label}</dt>
+                      <dd className="sm:col-span-2 min-w-0 text-sm text-gray-800 break-words [overflow-wrap:anywhere]">{value || "—"}</dd>
                     </div>
-                    <div>
-                      <label className={editLabelClass}>Initials</label>
-                      <input name="initials" value={form.initials} onChange={handleChange} className={editInputClass} />
-                    </div>
-                    <div>
-                      <label className={editLabelClass}>Name Denoted by Initials</label>
-                      <input name="nameWithInitials" value={form.nameWithInitials} onChange={handleChange} className={editInputClass} />
-                    </div>
-                    <div>
-                      <label className={editLabelClass}>Last Name</label>
-                      <input name="lastName" value={form.lastName} onChange={handleChange} className={editInputClass} />
-                    </div>
-                    <div>
-                      <label className={editLabelClass}>Gender</label>
-                      <select
-                        name="memberGenderId"
-                        value={form.memberGenderId}
-                        onChange={handleChange}
-                        className={editInputClass}
-                      >
-                        <option value="">Select…</option>
-                        {genders.map((g) => (
-                          <option key={g.category_id} value={String(g.category_id)}>
-                            {g.description}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className={editLabelClass}>Student NIC / Guardian NIC</label>
-                      <input name="nic" value={form.nic} onChange={handleChange} className={editInputClass} />
-                    </div>
-                    <div>
-                      <label className={editLabelClass}>Date of Birth</label>
-                      <input type="date" name="dob" value={form.dob} onChange={handleChange} className={editInputClass} />
-                    </div>
-                    <div>
-                      <label className={editLabelClass}>Primary Phone</label>
-                      <input name="primaryPhone" value={form.primaryPhone} onChange={handleChange} className={editInputClass} />
-                    </div>
-                    <div>
-                      <label className={editLabelClass}>Secondary Phone</label>
-                      <input name="secondaryPhone" value={form.secondaryPhone} onChange={handleChange} className={editInputClass} />
-                    </div>
-                    <div className="sm:col-span-2">
-                      <label className={editLabelClass}>Address</label>
-                      <input name="address" value={form.address} onChange={handleChange} className={editInputClass} />
-                    </div>
-                  </div>
-
-                  <p className="text-xs text-gray-400 mt-3">
-                    Email, membership type and club can't be changed here.
-                  </p>
-
-                  {formError && (
-                    <p className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2 mt-3">{formError}</p>
-                  )}
-
-                  <div className="flex items-center gap-3 mt-4">
-                    <button
-                      onClick={handleSave}
-                      disabled={saving}
-                      className="bg-blue-700 hover:bg-blue-800 disabled:opacity-60 text-white font-semibold py-2 px-5 rounded-lg text-sm transition"
-                    >
-                      {saving ? "Saving…" : "Save Changes"}
-                    </button>
-                    <button
-                      onClick={cancelEdit}
-                      className="text-sm font-semibold text-gray-500 hover:text-gray-700 transition"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <dl className="flex-1 divide-y divide-gray-100">
-                  {loading ? (
-                    <p className="text-sm text-gray-400 py-6">Loading your details…</p>
-                  ) : (
-                    rows.map(([label, value]) => (
-                      <div key={label} className="py-2.5 grid grid-cols-1 sm:grid-cols-3 gap-1">
-                        <dt className="text-xs font-medium text-gray-400">{label}</dt>
-                        <dd className="sm:col-span-2 min-w-0 text-sm text-gray-800 break-words [overflow-wrap:anywhere]">{value || "—"}</dd>
-                      </div>
-                    ))
-                  )}
-                </dl>
-              )}
+                  ))
+                )}
+              </dl>
             </div>
+
+            <p className="text-xs text-gray-400 mt-4">
+              Your details can't be changed until payment is complete.
+            </p>
           </div>
 
           {/* Workflow tracker + actions */}

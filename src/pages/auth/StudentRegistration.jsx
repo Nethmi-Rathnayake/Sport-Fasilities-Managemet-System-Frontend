@@ -106,7 +106,12 @@ export default function StudentRegistration() {
     api
       .get("/api/clubs")
       .then((res) => {
-        setClubs(res.data);
+        // Students may only register under an approved (Active) club, so
+        // filter out any club that isn't currently Active before listing.
+        const approvedClubs = (res.data || []).filter(
+          (c) => c.club_status === "Active"
+        );
+        setClubs(approvedClubs);
         setClubsLoading(false);
       })
       .catch(() => {
@@ -264,6 +269,8 @@ export default function StudentRegistration() {
       errs.nameWithInitials = "Please enter the name denoted by your initials.";
     if (!form.lastName.trim()) errs.lastName = "Please enter your last name.";
     if (!form.memberGenderId) errs.memberGenderId = "Please select your gender.";
+    if (!form.studentId.trim())
+      errs.studentId = "Please enter your NIC (or guardian's NIC).";
     if (!form.primaryPhone.trim())
       errs.primaryPhone = "Please enter your primary phone.";
     else if (!isValidPhone(form.primaryPhone))
@@ -969,15 +976,16 @@ export default function StudentRegistration() {
 
                 <div>
                   <label className={labelClass}>
-                    Student NIC <span>or Guardian NIC</span>
+                    Student NIC <span>or Guardian NIC</span> {required}
                   </label>
                   <input
                     name="studentId"
                     value={form.studentId}
                     onChange={handleFormChange}
                     placeholder="200012345678"
-                    className={inputClass}
+                    className={fieldClass("studentId")}
                   />
+                  {fieldError("studentId")}
                 </div>
 
                 {/* Row 4 — Date of Birth · Primary Phone · Secondary Phone */}
