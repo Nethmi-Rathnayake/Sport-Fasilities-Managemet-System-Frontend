@@ -1,6 +1,7 @@
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import logo from "../../assets/usjp-logo__1_-removebg-preview.png";
+import AuthShell from "../../components/auth/AuthShell";
 
 // Shown after OTP verification when the email is NOT yet registered.
 // Asks the user whether they want to register as a Student or as a Club,
@@ -19,7 +20,7 @@ export default function SelectRegistration() {
     navigate("/club-registration", { state: { email } });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 flex flex-col items-center justify-center p-4">
+    <AuthShell>
       <div className="w-full max-w-sm">
         <div className="bg-white rounded-2xl shadow-lg p-8 w-full">
           {/* USJ Branding */}
@@ -72,6 +73,6 @@ export default function SelectRegistration() {
       <p className="text-xs text-gray-400 mt-8">
         © {new Date().getFullYear()} University of Sri Jayewardenepura
       </p>
-    </div>
+    </AuthShell>
   );
 }

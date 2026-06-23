@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "../../assets/usjp-logo__1_-removebg-preview.png";
 import api from "../../services/api";
+import AuthShell from "../../components/auth/AuthShell";
 import {
   sendOtp as sendOtpRequest,
   verifyOtp as verifyOtpRequest,
@@ -419,7 +420,7 @@ export default function StudentRegistration() {
   // ══════════════════════════════════════════
   if (step === "email") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 py-6 px-4 flex flex-col items-center justify-center">
+      <AuthShell>
         <div className="w-full max-w-sm">
           <div className="bg-white rounded-2xl shadow-lg p-8 w-full">
             <Header />
@@ -487,7 +488,7 @@ export default function StudentRegistration() {
           </div>
         </div>
         <Footer />
-      </div>
+      </AuthShell>
     );
   }
 
@@ -496,7 +497,7 @@ export default function StudentRegistration() {
   // ══════════════════════════════════════════
   if (step === "otp") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 py-6 px-4 flex flex-col items-center justify-center">
+      <AuthShell>
         <div className="w-full max-w-sm">
           <div className="bg-white rounded-2xl shadow-lg p-8 w-full text-center">
             <Header />
@@ -570,7 +571,7 @@ export default function StudentRegistration() {
           </div>
         </div>
         <Footer />
-      </div>
+      </AuthShell>
     );
   }
 

@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import EmailStep from "../../components/auth/EmailStep";
 import OtpStep from "../../components/auth/OtpStep";
+import AuthShell from "../../components/auth/AuthShell";
 import { sendOtp } from "../../services/authService";
 import { isEmailRegistered } from "../../services/memberService";
 
@@ -201,71 +202,73 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 flex flex-col items-center justify-center p-4">
-
-      {/* Step indicator */}
-      <div className="flex items-center gap-3 mb-8">
-        <div className="flex items-center gap-2">
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 ${
-            step === "email"
-              ? "bg-blue-700 text-white border-blue-700"
-              : "bg-green-500 text-white border-green-500"
-          }`}>
-            {step === "otp" ? (
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-              </svg>
-            ) : "1"}
+    <AuthShell>
+      {/* Login form (right panel) */}
+      <div className="w-full flex flex-col items-center">
+        {/* Step indicator */}
+        <div className="flex items-center gap-3 mb-8">
+          <div className="flex items-center gap-2">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 ${
+              step === "email"
+                ? "bg-blue-700 text-white border-blue-700"
+                : "bg-green-500 text-white border-green-500"
+            }`}>
+              {step === "otp" ? (
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                </svg>
+              ) : "1"}
+            </div>
+            <span className={`text-sm font-semibold ${step === "email" ? "text-blue-700" : "text-gray-400"}`}>
+              Email OTP Login
+            </span>
           </div>
-          <span className={`text-sm font-semibold ${step === "email" ? "text-blue-700" : "text-gray-400"}`}>
-            Email OTP Login
-          </span>
+
+          <div className={`h-px w-10 ${step === "otp" ? "bg-blue-600" : "bg-gray-300"}`} />
+
+          <div className="flex items-center gap-2">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 ${
+              step === "otp"
+                ? "bg-blue-700 text-white border-blue-700"
+                : "bg-gray-200 text-gray-400 border-gray-200"
+            }`}>
+              2
+            </div>
+            <span className={`text-sm font-semibold ${step === "otp" ? "text-blue-700" : "text-gray-400"}`}>
+              OTP Verification
+            </span>
+          </div>
         </div>
 
-        <div className={`h-px w-10 ${step === "otp" ? "bg-blue-600" : "bg-gray-300"}`} />
+        {/* Card */}
+        <div className="w-full max-w-sm">
+          {step === "email"
+            ? <EmailStep initialEmail={initialEmail} onSend={handleSendOtp} beforeSend={handleBeforeSend} />
+            : <OtpStep email={email} onVerify={handleVerify} onResend={() => sendOtp(email)} />
+          }
 
-        <div className="flex items-center gap-2">
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 ${
-            step === "otp"
-              ? "bg-blue-700 text-white border-blue-700"
-              : "bg-gray-200 text-gray-400 border-gray-200"
-          }`}>
-            2
-          </div>
-          <span className={`text-sm font-semibold ${step === "otp" ? "text-blue-700" : "text-gray-400"}`}>
-            OTP Verification
-          </span>
-        </div>
-      </div>
-
-      {/* Card */}
-      <div className="w-full max-w-sm">
-        {step === "email"
-          ? <EmailStep initialEmail={initialEmail} onSend={handleSendOtp} beforeSend={handleBeforeSend} />
-          : <OtpStep email={email} onVerify={handleVerify} onResend={() => sendOtp(email)} />
-        }
-
-        {step === "otp" && (
-          <button onClick={() => setStep("email")}
-            className="w-full text-center text-xs text-gray-400 hover:text-blue-600 mt-3 transition">
-            Change email
-          </button>
-        )}
-
-        <div className="text-center mt-5">
-          <p className="text-sm text-gray-500">
-            New student?{" "}
-            <button onClick={() => navigate("/select-registration")}
-              className="text-blue-600 font-semibold hover:underline">
-              Register here
+          {step === "otp" && (
+            <button onClick={() => setStep("email")}
+              className="w-full text-center text-xs text-gray-400 hover:text-blue-600 mt-3 transition">
+              Change email
             </button>
-          </p>
-        </div>
-      </div>
+          )}
 
-      <p className="text-xs text-gray-400 mt-8">
-        © {new Date().getFullYear()} University of Sri Jayewardenepura
-      </p>
-    </div>
+          <div className="text-center mt-5">
+            <p className="text-sm text-gray-500">
+              New student?{" "}
+              <button onClick={() => navigate("/select-registration")}
+                className="text-blue-600 font-semibold hover:underline">
+                Register here
+              </button>
+            </p>
+          </div>
+        </div>
+
+        <p className="text-xs text-gray-400 mt-8">
+          © {new Date().getFullYear()} University of Sri Jayewardenepura
+        </p>
+      </div>
+    </AuthShell>
   );
 }
