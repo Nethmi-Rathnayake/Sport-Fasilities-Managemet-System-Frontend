@@ -41,6 +41,7 @@ const buildName = (initials, denoted, lastname) => {
 
 const fmtDate = (v) => {
   if (!v) return "—";
+  
   const s = String(v);
   return s.length >= 10 ? s.slice(0, 10) : s;
 };
@@ -1018,7 +1019,7 @@ export default function CoachDashboard() {
   };
 
   return (
-    <div className="min-h-screen flex overflow-x-hidden bg-gradient-to-br from-blue-50 via-white to-blue-100" style={{ fontFamily: "Inter, system-ui, sans-serif" }}>
+    <div className="min-h-screen flex overflow-x-hidden bg-gradient-to-br from-blue-50 via-white to-blue-100 m-0 p-[14px]" style={{ fontFamily: "Inter, system-ui, sans-serif" }}>
       {/* ══ SIDEBAR ══ */}
       <aside
         className={`fixed lg:static z-40 inset-y-0 left-0 w-64 flex flex-col transition-transform ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}

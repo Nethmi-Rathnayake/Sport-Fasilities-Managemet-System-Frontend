@@ -109,7 +109,7 @@ const FOOTER_COLUMNS = [
 const PrimaryButton = ({ children, onClick, className = "" }) => (
   <button
     onClick={onClick}
-    className={`px-6 py-3 rounded-xl text-sm font-semibold text-white transition-colors ${className}`}
+    className={`px-6 py-3 rounded-xl text-lg font-semibold text-white transition-colors ${className}`}
     style={{ backgroundColor: BLUE }}
     onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = BLUE_HOVER)}
     onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = BLUE)}>
@@ -118,15 +118,15 @@ const PrimaryButton = ({ children, onClick, className = "" }) => (
 );
 
 const SectionHeading = ({ eyebrow, title, subtitle, light = false }) => (
-  <div className="text-center max-w-2xl mx-auto mb-10">
+  <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-10 lg:mb-14">
     {eyebrow && (
-      <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: light ? "#93b4ff" : BLUE }}>
+      <p className="text-base font-bold tracking-widest uppercase mb-2" style={{ color: light ? "#93b4ff" : BLUE }}>
         {eyebrow}
       </p>
     )}
-    <h2 className="text-2xl sm:text-3xl font-extrabold" style={{ color: light ? "#fff" : NAVY }}>{title}</h2>
+    <h2 className="text-[22px] sm:text-[28px] lg:text-[36px] font-extrabold leading-tight" style={{ color: light ? "#fff" : NAVY }}>{title}</h2>
     {subtitle && (
-      <p className="mt-3 text-sm leading-relaxed" style={{ color: light ? "rgba(255,255,255,0.7)" : "#6b7280" }}>
+      <p className="mt-3 text-base sm:text-lg leading-relaxed" style={{ color: light ? "rgba(255,255,255,0.7)" : "#6b7280" }}>
         {subtitle}
       </p>
     )}
@@ -146,31 +146,31 @@ const LoginCard = ({ navigate }) => {
 
   return (
     <div className="bg-white rounded-2xl shadow-2xl p-7">
-      <div className="flex items-center gap-3 mb-5">
-        <img src={logo} alt="USJ" className="w-11 h-11 object-contain flex-shrink-0" />
+      <div className="flex items-center gap-3 mb-6">
+        <img src={logo} alt="USJ" className="w-14 h-14 object-contain flex-shrink-0" />
         <div>
-          <p className="font-bold text-sm leading-tight" style={{ color: NAVY }}>Member Sign In</p>
-          <p className="text-xs" style={{ color: BLUE }}>Sports Facility Portal</p>
+          <p className="font-bold text-lg leading-tight" style={{ color: NAVY }}>Member Sign In</p>
+          <p className="text-base" style={{ color: BLUE }}>Sports Facility Portal</p>
         </div>
       </div>
 
-      <p className="text-sm text-gray-500 mb-5 leading-relaxed">
+      <p className="text-base sm:text-lg text-gray-500 mb-6 leading-relaxed text-center">
         Enter your email to receive a one-time passcode (OTP) and access your account.
       </p>
 
       <form onSubmit={submit}>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+        <label className="block text-base sm:text-lg font-medium text-gray-700 mb-2">Email Address</label>
         <input
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="example@sjp.ac.lk"
-          className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3"
+          className="w-full h-12 lg:h-[52px] border border-gray-300 rounded-lg px-4 text-base lg:text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
         />
         <button
           type="submit"
           disabled={!email.includes("@")}
-          className="w-full text-white font-semibold py-2.5 rounded-lg text-sm transition-colors disabled:opacity-50"
+          className="w-full h-12 lg:h-[52px] text-white font-semibold rounded-lg text-base lg:text-lg transition-colors disabled:opacity-50"
           style={{ backgroundColor: BLUE }}
           onMouseEnter={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.backgroundColor = BLUE_HOVER; }}
           onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = BLUE)}>
@@ -179,7 +179,7 @@ const LoginCard = ({ navigate }) => {
       </form>
 
       <div className="text-center mt-5">
-        <p className="text-sm text-gray-500">
+        <p className="text-lg text-gray-500">
           New here?{" "}
           <button onClick={() => navigate("/select-registration")} className="font-semibold hover:underline" style={{ color: BLUE }}>
             Register
@@ -195,11 +195,11 @@ const PageHero = ({ eyebrow, title, subtitle, primaryCta, onPrimary }) => (
   <section className="relative overflow-hidden min-h-[340px] sm:min-h-[380px]">
     <img src={poolImg} alt="" className="absolute inset-0 w-full h-full object-cover" />
     <div className="absolute inset-0" style={{ background: "linear-gradient(90deg, rgba(7,20,45,0.96) 0%, rgba(7,20,45,0.88) 45%, rgba(7,20,45,0.55) 80%, rgba(7,20,45,0.25) 100%)" }} />
-    <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 flex items-center min-h-[340px] sm:min-h-[380px] py-20">
+    <div className="relative z-10 max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-1 flex items-center min-h-[340px] sm:min-h-[380px] py-20">
       <div className="max-w-2xl pt-12 sm:pt-16">
-        <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: "#60a5fa" }}>{eyebrow}</p>
-        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white leading-tight">{title}</h1>
-        <p className="mt-4 text-base leading-relaxed" style={{ color: "rgba(255,255,255,0.78)" }}>{subtitle}</p>
+        <p className="text-base font-bold tracking-widest uppercase mb-3" style={{ color: "#60a5fa" }}>{eyebrow}</p>
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white leading-tight">{title}</h1>
+        <p className="mt-4 text-[15px] sm:text-[16px] lg:text-[18px] leading-relaxed" style={{ color: "rgba(255,255,255,0.78)" }}>{subtitle}</p>
         {primaryCta && (
           <div className="mt-7">
             <PrimaryButton onClick={onPrimary}>{primaryCta}</PrimaryButton>
@@ -220,30 +220,20 @@ function HomeTab({ navigate }) {
       <section className="relative overflow-hidden min-h-[480px] sm:min-h-[560px] lg:min-h-[600px]">
         <img src={poolImg} alt="Swimming Pool" className="absolute inset-0 w-full h-full object-cover" />
         <div className="absolute inset-0" style={{ background: "linear-gradient(90deg, rgba(7,20,45,0.95) 0%, rgba(7,20,45,0.88) 35%, rgba(7,20,45,0.55) 60%, rgba(7,20,45,0.15) 100%)" }} />
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 min-h-[480px] sm:min-h-[560px] lg:min-h-[600px] flex items-center py-24 lg:py-20">
+        <div className="relative z-10 max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-1 min-h-[480px] sm:min-h-[560px] lg:min-h-[600px] flex items-center py-24 lg:py-20">
           <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
-            <div className="max-w-xl">
-              <p className="text-sm font-semibold tracking-widest mb-4" style={{ color: "#60a5fa" }}>WELCOME TO</p>
-              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold text-white leading-tight">
+            <div className="max-w-2xl">
+              <p className="text-sm sm:text-base font-semibold tracking-widest mb-3" style={{ color: "#60a5fa" }}>WELCOME TO</p>
+              <h1 className="text-[28px] sm:text-[36px] lg:text-[48px] font-bold text-white leading-tight">
                 Sports Facility<br />Management &<br />Access Control System
               </h1>
-              <p className="mt-5 text-base leading-relaxed" style={{ color: "rgba(255,255,255,0.75)" }}>
+              <p className="mt-4 text-[15px] sm:text-[16px] lg:text-[18px] leading-relaxed" style={{ color: "rgba(255,255,255,0.75)" }}>
                 A smart, secure and centralized platform to manage sports facilities, memberships, bookings, access and payments for a better sports experience.
               </p>
-              <div className="flex flex-wrap gap-4 mt-8">
-                <button onClick={() => navigate("/login")} className="flex items-center gap-3 px-6 py-3 rounded-xl text-white" style={{ backgroundColor: "#2563eb" }}>
-                  <SvgIcon path="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" className="w-5 h-5" width={2} />
-                  <div className="text-left"><div className="font-semibold">Sign In</div><div className="text-xs opacity-80">Access your account</div></div>
-                </button>
-                <button onClick={() => navigate("/select-registration")} className="flex items-center gap-3 px-6 py-3 rounded-xl border border-white/40 text-white bg-white/10 backdrop-blur-sm">
-                  <SvgIcon path="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" className="w-5 h-5" width={2} />
-                  <div className="text-left"><div className="font-semibold">Register</div><div className="text-xs opacity-80">Create a new account</div></div>
-                </button>
-              </div>
             </div>
 
             {/* LOGIN CARD */}
-            <div className="lg:justify-self-end w-full max-w-sm">
+            <div className="w-full sm:max-w-[420px] lg:max-w-[500px] mx-auto lg:mx-0 lg:justify-self-end">
               <LoginCard navigate={navigate} />
             </div>
           </div>
@@ -252,16 +242,16 @@ function HomeTab({ navigate }) {
 
       {/* FEATURES STRIP */}
       <section className="relative -mt-8 z-20 px-4">
-        <div className="max-w-6xl mx-auto bg-white rounded-2xl shadow-xl p-8">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-0">
+        <div className="max-w-[1440px] mx-auto bg-white rounded-2xl shadow-xl p-10">
+          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-0">
             {FEATURES.map((f, i) => (
-              <div key={i} className={`flex flex-col items-center text-center gap-3 px-4 py-2 group cursor-pointer ${i !== 0 ? "lg:border-l" : ""}`} style={{ borderColor: "#eef2f9" }}>
+              <div key={i} className={`flex flex-col items-center text-center gap-4 px-4 py-6 group cursor-pointer ${i !== 0 ? "lg:border-l" : ""}`} style={{ borderColor: "#eef2f9" }}>
                 <div className="w-14 h-14 rounded-2xl flex items-center justify-center transition-all group-hover:scale-110" style={{ backgroundColor: "#eaf1fe" }}>
                   <SvgIcon path={f.icon} className="w-7 h-7" stroke="#2563eb" />
                 </div>
                 <div>
-                  <p className="font-bold text-sm mb-1" style={{ color: "#0c43db" }}>{f.title}</p>
-                  <p className="text-xs text-gray-400 leading-relaxed">{f.desc}</p>
+                  <p className="font-bold text-[16px] lg:text-[18px] mb-1" style={{ color: "#0c43db" }}>{f.title}</p>
+                  <p className="text-[14px] lg:text-[15px] text-gray-500 leading-relaxed">{f.desc}</p>
                 </div>
               </div>
             ))}
@@ -270,18 +260,18 @@ function HomeTab({ navigate }) {
       </section>
 
       {/* WHO CAN USE */}
-      <section className="py-16 px-4 sm:px-6" style={{ backgroundColor: "rgba(15,28,63,0.55)" }}>
-        <div className="max-w-7xl mx-auto">
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-center mb-10 text-white">Who Can Use This System?</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+      <section className="py-12 sm:py-16 lg:py-24 px-4 sm:px-6 lg:px-1" style={{ backgroundColor: "rgba(15,28,63,0.55)" }}>
+        <div className="max-w-[1600px] mx-auto">
+          <h2 className="text-[22px] sm:text-[28px] lg:text-[36px] font-extrabold leading-tight text-center mb-8 sm:mb-10 lg:mb-14 text-white">Who Can Use This System?</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8 lg:gap-12">
             {WHO_CAN_USE.map((item, i) => (
-              <div key={i} className="bg-white rounded-2xl p-6 shadow-sm flex items-start gap-4 hover:shadow-md transition-shadow">
+              <div key={i} className="bg-white rounded-2xl p-8 shadow-sm flex items-start gap-4 hover:shadow-md transition-shadow">
                 <div className="w-14 h-14 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: LIGHT_BLUE }}>
                   <SvgIcon path={item.icon} className="w-7 h-7" stroke={BLUE} />
                 </div>
                 <div>
-                  <p className="font-bold text-sm mb-2" style={{ color: NAVY }}>{item.title}</p>
-                  <p className="text-xs text-gray-500 leading-relaxed">{item.desc}</p>
+                  <p className="font-bold text-lg mb-2" style={{ color: NAVY }}>{item.title}</p>
+                  <p className="text-base text-gray-500 leading-relaxed">{item.desc}</p>
                 </div>
               </div>
             ))}
@@ -304,17 +294,17 @@ function AboutTab({ navigate }) {
       />
 
       {/* OUR MISSION */}
-      <section className="py-16 px-4 sm:px-6 bg-white">
-        <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">
+      <section className="py-12 sm:py-16 lg:py-24 px-4 sm:px-6 lg:px-1 bg-white">
+        <div className="max-w-[1280px] mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">
           <div className="lg:col-span-1 flex justify-center">
             <div className="w-28 h-28 rounded-3xl flex items-center justify-center" style={{ backgroundColor: LIGHT_BLUE }}>
               <SvgIcon path="M12 2l2.4 7.4H22l-6 4.6 2.3 7.4-6.3-4.6L5.7 21l2.3-7.4-6-4.6h7.6z" className="w-14 h-14" stroke={BLUE} />
             </div>
           </div>
           <div className="lg:col-span-2">
-            <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: BLUE }}>Our Mission</p>
-            <h2 className="text-2xl sm:text-3xl font-extrabold mb-4" style={{ color: NAVY }}>Sports, Technology & Excellence</h2>
-            <p className="text-sm leading-relaxed text-gray-600">
+            <p className="text-base font-bold tracking-widest uppercase mb-2" style={{ color: BLUE }}>Our Mission</p>
+            <h2 className="text-xl sm:text-2xl font-extrabold mb-4" style={{ color: NAVY }}>Sports, Technology & Excellence</h2>
+            <p className="text-lg leading-relaxed text-gray-600">
               We aim to make sports facilities accessible to every student, coach and member of our community. By bringing bookings, memberships, access control and payments onto one secure platform, we remove barriers and let everyone focus on what matters — staying active, training hard and enjoying the game.
             </p>
           </div>
@@ -322,17 +312,17 @@ function AboutTab({ navigate }) {
       </section>
 
       {/* WHAT WE DO */}
-      <section className="py-16 px-4 sm:px-6" style={{ backgroundColor: "#f0f2f5" }}>
-        <div className="max-w-7xl mx-auto">
+      <section className="py-12 sm:py-16 lg:py-24 px-4 sm:px-6 lg:px-1" style={{ backgroundColor: "#f0f2f5" }}>
+        <div className="max-w-[1600px] mx-auto">
           <SectionHeading eyebrow="What We Do" title="Everything You Need in One Platform" subtitle="From booking a lane to managing a club, our system handles the full sports facility experience." />
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {FEATURES.map((f, i) => (
-              <div key={i} className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow">
+              <div key={i} className="bg-white rounded-2xl p-8 shadow-sm hover:shadow-md transition-shadow">
                 <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4" style={{ backgroundColor: LIGHT_BLUE }}>
                   <SvgIcon path={f.icon} className="w-7 h-7" stroke={BLUE} />
                 </div>
-                <p className="font-bold text-sm mb-1" style={{ color: NAVY }}>{f.title}</p>
-                <p className="text-xs text-gray-500 leading-relaxed">{f.desc}</p>
+                <p className="font-bold text-lg mb-1" style={{ color: NAVY }}>{f.title}</p>
+                <p className="text-base text-gray-500 leading-relaxed">{f.desc}</p>
               </div>
             ))}
           </div>
@@ -340,12 +330,12 @@ function AboutTab({ navigate }) {
       </section>
 
       {/* STATS */}
-      <section className="py-14 px-4 sm:px-6" style={{ backgroundColor: NAVY }}>
-        <div className="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-8 text-center">
+      <section className="py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-1" style={{ backgroundColor: NAVY }}>
+        <div className="max-w-[1280px] mx-auto grid grid-cols-1 sm:grid-cols-3 gap-8 text-center">
           {STATS.map((s, i) => (
             <div key={i}>
-              <p className="text-4xl sm:text-5xl font-extrabold" style={{ color: "#60a5fa" }}>{s.value}</p>
-              <p className="text-sm mt-2" style={{ color: "rgba(255,255,255,0.7)" }}>{s.label}</p>
+              <p className="text-3xl sm:text-4xl font-extrabold" style={{ color: "#60a5fa" }}>{s.value}</p>
+              <p className="text-lg mt-2" style={{ color: "rgba(255,255,255,0.7)" }}>{s.label}</p>
             </div>
           ))}
         </div>
@@ -365,21 +355,21 @@ function FacilitiesTab({ navigate }) {
         onPrimary={() => navigate("/login")}
       />
 
-      <section className="py-16 px-4 sm:px-6 bg-white">
-        <div className="max-w-7xl mx-auto">
+      <section className="py-12 sm:py-16 lg:py-24 px-4 sm:px-6 lg:px-1 bg-white">
+        <div className="max-w-[1600px] mx-auto">
           <SectionHeading eyebrow="Our Facilities" title="Train, Play and Compete" subtitle="Each facility is maintained to the highest standard and available to all eligible members." />
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {FACILITIES.map((f, i) => (
               <div key={i} className="rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow border border-gray-100 bg-white flex flex-col">
                 <div className="h-36 flex items-center justify-center" style={{ background: f.gradient }}>
                   <SvgIcon path={f.icon} className="w-14 h-14" stroke="#fff" width={1.6} />
                 </div>
-                <div className="p-5 flex flex-col flex-1">
-                  <p className="font-bold text-base mb-1" style={{ color: NAVY }}>{f.title}</p>
-                  <p className="text-xs text-gray-500 leading-relaxed flex-1">{f.desc}</p>
+                <div className="p-7 flex flex-col flex-1">
+                  <p className="font-bold text-xl mb-1" style={{ color: NAVY }}>{f.title}</p>
+                  <p className="text-base text-gray-500 leading-relaxed flex-1">{f.desc}</p>
                   <button
                     onClick={() => navigate("/login")}
-                    className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold self-start" style={{ color: BLUE }}>
+                    className="mt-4 inline-flex items-center gap-1.5 text-base font-semibold self-start" style={{ color: BLUE }}>
                     Book now
                     <SvgIcon path="M14 5l7 7m0 0l-7 7m7-7H3" className="w-3.5 h-3.5" width={2} />
                   </button>
@@ -405,30 +395,30 @@ function MembershipTab({ navigate }) {
       />
 
       {/* PLANS */}
-      <section className="py-16 px-4 sm:px-6" style={{ backgroundColor: "#f0f2f5" }}>
-        <div className="max-w-6xl mx-auto">
+      <section className="py-12 sm:py-16 lg:py-24 px-4 sm:px-6 lg:px-1" style={{ backgroundColor: "#f0f2f5" }}>
+        <div className="max-w-[1440px] mx-auto">
           <SectionHeading eyebrow="Choose Your Plan" title="Simple, Transparent Pricing" subtitle="All plans are billed annually. Prices are shown in Sri Lankan Rupees (LKR)." />
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
             {PLANS.map((p, i) => (
               <div
                 key={i}
-                className="relative rounded-2xl p-7 flex flex-col"
+                className="relative rounded-2xl p-10 flex flex-col"
                 style={{
                   backgroundColor: p.highlight ? NAVY : "#fff",
                   boxShadow: p.highlight ? "0 20px 40px -12px rgba(15,28,63,0.45)" : "0 1px 3px rgba(0,0,0,0.08)",
                   transform: p.highlight ? "scale(1.03)" : "none",
                 }}>
                 {p.highlight && (
-                  <span className="absolute top-5 right-5 text-xs font-bold px-3 py-1 rounded-full" style={{ backgroundColor: GOLD, color: "#3b2a00" }}>
+                  <span className="absolute top-5 right-5 text-base font-bold px-3 py-1 rounded-full" style={{ backgroundColor: GOLD, color: "#3b2a00" }}>
                     Most Popular
                   </span>
                 )}
-                <p className="font-bold text-lg" style={{ color: p.highlight ? "#fff" : NAVY }}>{p.name}</p>
-                <p className="text-xs mt-1 mb-5" style={{ color: p.highlight ? "rgba(255,255,255,0.65)" : "#9ca3af" }}>{p.desc}</p>
+                <p className="font-bold text-xl" style={{ color: p.highlight ? "#fff" : NAVY }}>{p.name}</p>
+                <p className="text-base mt-1 mb-5" style={{ color: p.highlight ? "rgba(255,255,255,0.65)" : "#9ca3af" }}>{p.desc}</p>
                 <div className="flex items-end gap-1 mb-6">
-                  <span className="text-sm font-semibold mb-1" style={{ color: p.highlight ? "rgba(255,255,255,0.7)" : "#6b7280" }}>LKR</span>
-                  <span className="text-4xl font-extrabold" style={{ color: p.highlight ? "#fff" : NAVY }}>{p.price}</span>
-                  <span className="text-xs mb-1.5" style={{ color: p.highlight ? "rgba(255,255,255,0.6)" : "#9ca3af" }}>/ {p.period}</span>
+                  <span className="text-lg font-semibold mb-1" style={{ color: p.highlight ? "rgba(255,255,255,0.7)" : "#6b7280" }}>LKR</span>
+                  <span className="text-3xl font-extrabold" style={{ color: p.highlight ? "#fff" : NAVY }}>{p.price}</span>
+                  <span className="text-base mb-1.5" style={{ color: p.highlight ? "rgba(255,255,255,0.6)" : "#9ca3af" }}>/ {p.period}</span>
                 </div>
                 <ul className="space-y-3 flex-1 mb-6">
                   {p.features.map((feat, j) => (
@@ -436,13 +426,13 @@ function MembershipTab({ navigate }) {
                       <span className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style={{ backgroundColor: p.highlight ? "rgba(96,165,250,0.25)" : LIGHT_BLUE }}>
                         <SvgIcon path="M5 13l4 4L19 7" className="w-2.5 h-2.5" stroke={p.highlight ? "#93b4ff" : BLUE} width={3} />
                       </span>
-                      <span className="text-xs leading-relaxed" style={{ color: p.highlight ? "rgba(255,255,255,0.85)" : "#4b5563" }}>{feat}</span>
+                      <span className="text-base leading-relaxed" style={{ color: p.highlight ? "rgba(255,255,255,0.85)" : "#4b5563" }}>{feat}</span>
                     </li>
                   ))}
                 </ul>
                 <button
                   onClick={() => navigate("/select-registration")}
-                  className="w-full py-3 rounded-xl text-sm font-semibold transition-colors"
+                  className="w-full py-3 rounded-xl text-lg font-semibold transition-colors"
                   style={{ backgroundColor: p.highlight ? GOLD : BLUE, color: p.highlight ? "#3b2a00" : "#fff" }}>
                   Get Started
                 </button>
@@ -453,18 +443,18 @@ function MembershipTab({ navigate }) {
       </section>
 
       {/* BENEFITS */}
-      <section className="py-16 px-4 sm:px-6 bg-white">
-        <div className="max-w-7xl mx-auto">
+      <section className="py-12 sm:py-16 lg:py-24 px-4 sm:px-6 lg:px-1 bg-white">
+        <div className="max-w-[1600px] mx-auto">
           <SectionHeading eyebrow="Membership Benefits" title="Every Plan Comes Packed with Value" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {BENEFITS.map((b, i) => (
-              <div key={i} className="flex items-start gap-4 rounded-2xl p-5 border border-gray-100 hover:shadow-md transition-shadow">
+              <div key={i} className="flex items-start gap-4 rounded-2xl p-7 border border-gray-100 hover:shadow-md transition-shadow">
                 <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: LIGHT_BLUE }}>
                   <SvgIcon path={b.icon} className="w-6 h-6" stroke={BLUE} />
                 </div>
                 <div>
-                  <p className="font-bold text-sm mb-1" style={{ color: NAVY }}>{b.title}</p>
-                  <p className="text-xs text-gray-500 leading-relaxed">{b.desc}</p>
+                  <p className="font-bold text-lg mb-1" style={{ color: NAVY }}>{b.title}</p>
+                  <p className="text-base text-gray-500 leading-relaxed">{b.desc}</p>
                 </div>
               </div>
             ))}
@@ -486,31 +476,31 @@ function HowItWorksTab({ navigate }) {
         onPrimary={() => navigate("/select-registration")}
       />
 
-      <section className="py-16 px-4 sm:px-6 bg-white">
-        <div className="max-w-7xl mx-auto">
+      <section className="py-12 sm:py-16 lg:py-24 px-4 sm:px-6 lg:px-1 bg-white">
+        <div className="max-w-[1600px] mx-auto">
           <SectionHeading eyebrow="How It Works" title="From Sign-Up to Game Day in 5 Steps" subtitle="A smooth, fully online process — no paperwork, no queues." />
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8">
             {STEPS.map((s, i) => (
-              <div key={i} className="relative bg-white rounded-2xl p-6 text-center shadow-sm border border-gray-100">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold mx-auto mb-4" style={{ backgroundColor: NAVY, color: "#fff" }}>
+              <div key={i} className="relative bg-white rounded-2xl p-8 text-center shadow-sm border border-gray-100">
+                <div className="w-8 h-8 rounded-full flex items-center justify-center text-base font-bold mx-auto mb-4" style={{ backgroundColor: NAVY, color: "#fff" }}>
                   {i + 1}
                 </div>
                 <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: LIGHT_BLUE }}>
                   <SvgIcon path={s.icon} className="w-7 h-7" stroke={BLUE} width={2} />
                 </div>
-                <p className="font-bold text-sm mb-1" style={{ color: NAVY }}>{s.title}</p>
-                <p className="text-xs text-gray-500 leading-relaxed">{s.desc}</p>
+                <p className="font-bold text-lg mb-1" style={{ color: NAVY }}>{s.title}</p>
+                <p className="text-base text-gray-500 leading-relaxed">{s.desc}</p>
               </div>
             ))}
           </div>
 
           {/* CTA banner */}
-          <div className="mt-12 rounded-3xl p-10 text-center" style={{ background: "linear-gradient(120deg,#0f1c3f,#1a56db)" }}>
-            <h3 className="text-2xl font-extrabold text-white mb-2">Ready to get started?</h3>
-            <p className="text-sm mb-6" style={{ color: "rgba(255,255,255,0.75)" }}>Create your account today and access world-class facilities in minutes.</p>
+          <div className="mt-16 rounded-3xl p-12 text-center" style={{ background: "linear-gradient(120deg,#0f1c3f,#1a56db)" }}>
+            <h3 className="text-xl font-extrabold text-white mb-2">Ready to get started?</h3>
+            <p className="text-lg mb-6" style={{ color: "rgba(255,255,255,0.75)" }}>Create your account today and access world-class facilities in minutes.</p>
             <div className="flex flex-wrap gap-4 justify-center">
-              <button onClick={() => navigate("/select-registration")} className="px-7 py-3 rounded-xl text-sm font-semibold" style={{ backgroundColor: GOLD, color: "#3b2a00" }}>Register Now</button>
-              <button onClick={() => navigate("/login")} className="px-7 py-3 rounded-xl text-sm font-semibold border border-white/50 text-white bg-white/10">Sign In</button>
+              <button onClick={() => navigate("/select-registration")} className="px-7 py-3 rounded-xl text-lg font-semibold" style={{ backgroundColor: GOLD, color: "#3b2a00" }}>Register Now</button>
+              <button onClick={() => navigate("/login")} className="px-7 py-3 rounded-xl text-lg font-semibold border border-white/50 text-white bg-white/10">Sign In</button>
             </div>
           </div>
         </div>
@@ -551,26 +541,26 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen font-sans bg-white" style={{ fontFamily: "Inter, system-ui, sans-serif" }}>
+    <div className="min-h-screen font-sans bg-white m-0 p-[14px] overflow-x-hidden" style={{ fontFamily: "Inter, system-ui, sans-serif" }}>
       {/* ══ NAVBAR ══ */}
-      <nav className="fixed top-0 left-0 right-0 z-50 transition-all" style={{ backgroundColor: scrolled ? "rgba(10,20,50,0.97)" : "rgba(10,20,50,0.85)", backdropFilter: "blur(8px)" }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-14">
+      <nav className="fixed top-0 left-[12px] right-[12px] z-50 transition-all" style={{ backgroundColor: scrolled ? "rgba(10,20,50,0.97)" : "rgba(10,20,50,0.85)", backdropFilter: "blur(8px)" }}>
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-1 flex items-center justify-between h-20">
           {/* Logo */}
           <button className="flex items-center gap-2 sm:gap-3 min-w-0" onClick={() => goToTab("Home")}>
-            <img src={logo} alt="USJ" className="w-8 h-8 sm:w-10 sm:h-10 object-contain flex-shrink-0" />
+            <img src={logo} alt="USJ" className="w-10 h-10 sm:w-12 sm:h-12 object-contain flex-shrink-0" />
             <div className="text-left min-w-0">
-              <p className="text-white font-bold text-[11px] sm:text-sm leading-tight truncate">University of Sri Jayewardenepura</p>
-              <p className="text-[10px] sm:text-xs leading-tight truncate" style={{ color: GOLD }}>Physical Education Unit</p>
+              <p className="text-white font-bold text-[11px] sm:text-lg leading-tight truncate">University of Sri Jayewardenepura</p>
+              <p className="text-[10px] sm:text-base leading-tight truncate" style={{ color: GOLD }}>Physical Education Unit</p>
             </div>
           </button>
 
           {/* Desktop nav links */}
-          <div className="hidden lg:flex items-center gap-6">
+          <div className="hidden lg:flex items-center gap-6 xl:gap-8">
             {TABS.map((link) => {
               const active = activeTab === link;
               return (
                 <button key={link} onClick={() => goToTab(link)}
-                  className="text-sm font-medium transition-colors relative group"
+                  className="text-base xl:text-lg font-medium transition-colors relative group whitespace-nowrap"
                   style={{ color: active ? "#fff" : "rgba(255,255,255,0.75)" }}>
                   {link}
                   {active && <span className="absolute -bottom-1 left-0 right-0 h-0.5 rounded" style={{ backgroundColor: GOLD }} />}
@@ -581,13 +571,13 @@ export default function HomePage() {
           </div>
 
           {/* CTA buttons */}
-          <div className="hidden lg:flex items-center gap-3">
-            <button onClick={() => navigate("/login")} className="px-5 py-2 rounded-lg text-sm font-semibold border transition-colors" style={{ borderColor: "#fff", color: "#fff" }}
+          <div className="hidden lg:flex items-center gap-3 xl:gap-4">
+            <button onClick={() => navigate("/login")} className="px-4 xl:px-6 py-2.5 rounded-lg text-base xl:text-lg font-semibold border transition-colors whitespace-nowrap" style={{ borderColor: "#fff", color: "#fff" }}
               onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.1)")}
               onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}>
               Sign In
             </button>
-            <button onClick={() => navigate("/select-registration")} className="px-5 py-2 rounded-lg text-sm font-semibold transition-colors" style={{ backgroundColor: BLUE, color: "#fff" }}
+            <button onClick={() => navigate("/select-registration")} className="px-4 xl:px-6 py-2.5 rounded-lg text-base xl:text-lg font-semibold transition-colors whitespace-nowrap" style={{ backgroundColor: BLUE, color: "#fff" }}
               onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = BLUE_HOVER)}
               onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = BLUE)}>
               Register
@@ -609,14 +599,14 @@ export default function HomePage() {
           <div className="lg:hidden px-4 pb-4 space-y-1" style={{ backgroundColor: "rgba(10,20,50,0.97)" }}>
             {TABS.map((link) => (
               <button key={link} onClick={() => goToTab(link)}
-                className="block w-full text-left text-sm py-2"
+                className="block w-full text-left text-lg py-2.5"
                 style={{ color: activeTab === link ? GOLD : "rgba(255,255,255,0.8)" }}>
                 {link}
               </button>
             ))}
             <div className="flex gap-3 pt-2">
-              <button onClick={() => navigate("/login")} className="flex-1 py-2 rounded-lg text-sm font-semibold border border-white text-white">Sign In</button>
-              <button onClick={() => navigate("/select-registration")} className="flex-1 py-2 rounded-lg text-sm font-semibold text-white" style={{ backgroundColor: BLUE }}>Register</button>
+              <button onClick={() => navigate("/login")} className="flex-1 py-3 rounded-lg text-lg font-semibold border border-white text-white">Sign In</button>
+              <button onClick={() => navigate("/select-registration")} className="flex-1 py-3 rounded-lg text-lg font-semibold text-white" style={{ backgroundColor: BLUE }}>Register</button>
             </div>
           </div>
         )}
@@ -626,19 +616,19 @@ export default function HomePage() {
       {renderTab()}
 
       {/* ══ FOOTER ══ */}
-      <footer className="pt-12 pb-6 px-4 sm:px-6" style={{ backgroundColor: "rgba(10,20,50,0.95)" }}>
-        <div className="max-w-7xl mx-auto">
+      <footer className="pt-12 pb-6 px-4 sm:px-6 lg:px-1" style={{ backgroundColor: "rgba(10,20,50,0.95)" }}>
+        <div className="max-w-[1600px] mx-auto">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8 pb-10 border-b border-white border-opacity-10">
             {/* Brand */}
             <div>
               <div className="flex items-center gap-3 mb-4">
                 <img src={logo} alt="USJ" className="w-10 h-10 object-contain" />
                 <div>
-                  <p className="text-white font-bold text-sm leading-tight">University of Sri Jayewardenepura</p>
-                  <p className="text-xs" style={{ color: GOLD }}>Physical Education Unit</p>
+                  <p className="text-white font-bold text-lg leading-tight">University of Sri Jayewardenepura</p>
+                  <p className="text-base" style={{ color: GOLD }}>Physical Education Unit</p>
                 </div>
               </div>
-              <p className="text-xs leading-relaxed mb-5" style={{ color: "rgba(255,255,255,0.55)" }}>
+              <p className="text-base leading-relaxed mb-5" style={{ color: "rgba(255,255,255,0.7)" }}>
                 Empowering a healthy campus community through sports, technology and excellence.
               </p>
               <div className="flex gap-3">
@@ -662,15 +652,15 @@ export default function HomePage() {
             {/* Link columns */}
             {FOOTER_COLUMNS.map((col) => (
               <div key={col.title}>
-                <p className="text-white font-bold text-sm mb-4">{col.title}</p>
+                <p className="text-white font-bold text-lg mb-4">{col.title}</p>
                 <div className="space-y-2">
                   {col.links.map((link) => {
                     const isTab = TABS.includes(link);
                     return (
                       <button key={link}
                         onClick={() => (isTab ? goToTab(link) : null)}
-                        className="block text-xs transition-colors hover:text-white text-left"
-                        style={{ color: "rgba(255,255,255,0.55)" }}>
+                        className="block text-base transition-colors hover:text-white text-left"
+                        style={{ color: "rgba(255,255,255,0.7)" }}>
                         {link}
                       </button>
                     );
@@ -681,7 +671,7 @@ export default function HomePage() {
 
             {/* Contact */}
             <div>
-              <p className="text-white font-bold text-sm mb-4">Contact Us</p>
+              <p className="text-white font-bold text-lg mb-4">Contact Us</p>
               <div className="space-y-3">
                 {[
                   { icon: "M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z|M15 11a3 3 0 11-6 0 3 3 0 016 0z", text: "Physical Education Unit\nUniversity of Sri Jayewardenepura\nNugegoda, Sri Lanka" },
@@ -691,7 +681,7 @@ export default function HomePage() {
                 ].map((item, i) => (
                   <div key={i} className="flex items-start gap-2.5">
                     <SvgIcon path={item.icon} className="w-4 h-4 flex-shrink-0 mt-0.5" stroke={GOLD} />
-                    <p className="text-xs leading-relaxed whitespace-pre-line" style={{ color: "rgba(255,255,255,0.55)" }}>{item.text}</p>
+                    <p className="text-base leading-relaxed whitespace-pre-line" style={{ color: "rgba(255,255,255,0.7)" }}>{item.text}</p>
                   </div>
                 ))}
               </div>
@@ -700,7 +690,7 @@ export default function HomePage() {
 
           {/* Copyright */}
           <div className="pt-6 text-center">
-            <p className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>
+            <p className="text-base" style={{ color: "rgba(255,255,255,0.6)" }}>
               © 2026 University of Sri Jayewardenepura - Physical Education Unit. All rights reserved.
             </p>
           </div>

@@ -65,12 +65,12 @@ export default function OtpStep({ email, onVerify, onResend }) {
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-8 w-full text-center">
-      <h2 className="text-xl font-bold text-gray-900 mb-1">Verify Your Email</h2>
-      <p className="text-sm text-gray-500 mb-1">Enter the 6 digit code sent to</p>
-      <p className="text-sm font-semibold text-blue-700 mb-6">{email}</p>
+    <div className="bg-white rounded-3xl shadow-xl p-12 w-full text-center">
+      <h2 className="text-3xl font-bold text-gray-900 mb-2">Verify Your Email</h2>
+      <p className="text-lg text-gray-500 mb-1">Enter the 6 digit code sent to</p>
+      <p className="text-lg font-semibold text-blue-700 mb-8">{email}</p>
 
-      <div className="flex justify-center gap-2 mb-4" onPaste={handlePaste}>
+      <div className="flex justify-center gap-3 mb-4" onPaste={handlePaste}>
         {otp.map((digit, i) => (
           <input
             key={i}
@@ -81,14 +81,14 @@ export default function OtpStep({ email, onVerify, onResend }) {
             value={digit}
             onChange={(e) => handleChange(i, e.target.value)}
             onKeyDown={(e) => handleKeyDown(i, e)}
-            className="w-11 h-13 border-2 border-gray-300 rounded-lg text-center text-xl font-bold focus:outline-none focus:border-blue-600 transition py-2"
+            className="w-14 h-16 border-2 border-gray-300 rounded-lg text-center text-2xl font-bold focus:outline-none focus:border-blue-600 transition"
           />
         ))}
       </div>
 
-      {error && <p className="text-red-500 text-xs mb-2">{error}</p>}
+      {error && <p className="text-red-500 text-base mb-2">{error}</p>}
 
-      <p className="text-xs text-gray-500 mb-4">
+      <p className="text-base text-gray-500 mb-4">
         Code expires in{" "}
         <span className="text-red-500 font-semibold">{minutes}:{seconds}</span>{" "}
         <button onClick={() => { setTimer(165); setOtp(["","","","","",""]); onResend();
@@ -101,13 +101,13 @@ export default function OtpStep({ email, onVerify, onResend }) {
       <button
         onClick={handleVerify}
         disabled={loading || otp.join("").length < 6}
-        className="w-full bg-blue-700 hover:bg-blue-800 disabled:bg-blue-300 text-white font-semibold py-2.5 rounded-lg transition text-sm"
+        className="w-full bg-blue-700 hover:bg-blue-800 disabled:bg-blue-300 text-white font-semibold py-5 rounded-xl transition text-lg"
       >
         {loading ? "Verifying…" : "Verify & Login"}
       </button>
 
-      <p className="flex items-center justify-center gap-1.5 text-xs text-gray-400 mt-4">
-        <svg className="w-3.5 h-3.5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <p className="flex items-center justify-center gap-1.5 text-base text-gray-500 mt-4">
+        <svg className="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
         Secure authentication

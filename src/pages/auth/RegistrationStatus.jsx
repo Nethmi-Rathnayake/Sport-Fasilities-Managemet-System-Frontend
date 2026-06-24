@@ -136,17 +136,17 @@ export default function RegistrationStatus() {
   ];
 
   const Footer = () => (
-    <p className="text-xs text-gray-400 text-center mt-8">
+    <p className="text-xs text-gray-500 text-center mt-8">
       © {new Date().getFullYear()} University of Sri Jayewardenepura
     </p>
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 py-6 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 m-0 p-[14px]">
       <div className="max-w-3xl mx-auto w-full">
         {/* Branding header (matches the login page) */}
         <div className="flex items-center gap-3 mb-6">
-          <img src={logo} alt="USJ Logo" className="w-12 h-12 object-contain flex-shrink-0" />
+          <img src={logo} alt="USJ Logo" className="w-14 h-14 object-contain flex-shrink-0" />
           <div>
             <p className="font-semibold text-gray-800 text-sm leading-tight">University of Sri Jayewardenepura</p>
             <p className="text-xs text-blue-600">Sports Facility Portal</p>
@@ -180,7 +180,7 @@ export default function RegistrationStatus() {
           <div className="lg:col-span-2 bg-white rounded-2xl shadow-lg p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-bold text-sm text-gray-900">Your Submitted Details</h2>
-              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-400">
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-500">
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
@@ -197,16 +197,16 @@ export default function RegistrationStatus() {
                     <span className="text-xs text-gray-300">No photo</span>
                   )}
                 </div>
-                <p className="text-xs text-gray-400 text-center mt-2">Profile Photo</p>
+                <p className="text-xs text-gray-500 text-center mt-2">Profile Photo</p>
               </div>
 
               <dl className="flex-1 divide-y divide-gray-100">
                 {loading ? (
-                  <p className="text-sm text-gray-400 py-6">Loading your details…</p>
+                  <p className="text-sm text-gray-500 py-6">Loading your details…</p>
                 ) : (
                   rows.map(([label, value]) => (
-                    <div key={label} className="py-2.5 grid grid-cols-1 sm:grid-cols-3 gap-1">
-                      <dt className="text-xs font-medium text-gray-400">{label}</dt>
+                    <div key={label} className="py-3 grid grid-cols-1 sm:grid-cols-3 gap-1">
+                      <dt className="text-xs font-medium text-gray-500">{label}</dt>
                       <dd className="sm:col-span-2 min-w-0 text-sm text-gray-800 break-words [overflow-wrap:anywhere]">{value || "—"}</dd>
                     </div>
                   ))
@@ -214,7 +214,7 @@ export default function RegistrationStatus() {
               </dl>
             </div>
 
-            <p className="text-xs text-gray-400 mt-4">
+            <p className="text-xs text-gray-500 mt-4">
               Your details can't be changed until payment is complete.
             </p>
           </div>
@@ -226,7 +226,7 @@ export default function RegistrationStatus() {
               {steps.map((s) => (
                 <div key={s.label} className="flex items-center gap-3">
                   <StepIcon state={s.state} />
-                  <span className={`text-xs font-medium ${s.state === "todo" ? "text-gray-400" : "text-gray-700"}`}>
+                  <span className={`text-xs font-medium ${s.state === "todo" ? "text-gray-500" : "text-gray-700"}`}>
                     {s.label}
                   </span>
                 </div>
@@ -239,15 +239,15 @@ export default function RegistrationStatus() {
               </p>
             ) : (
               <button
-                onClick={() => alert("Payment gateway — coming soon!")}
-                className="w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold py-2.5 rounded-lg text-sm mt-4 transition"
+                onClick={() => navigate("/payment-method", { state: { member, email } })}
+                className="w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold py-3 rounded-lg text-sm mt-4 transition"
               >
                 Proceed to Payment
               </button>
             )}
             <button
               onClick={() => navigate("/login", { replace: true })}
-              className="w-full text-sm text-gray-400 hover:text-blue-600 transition mt-3"
+              className="w-full text-sm text-gray-500 hover:text-blue-600 transition mt-3"
             >
               Back to Login
             </button>

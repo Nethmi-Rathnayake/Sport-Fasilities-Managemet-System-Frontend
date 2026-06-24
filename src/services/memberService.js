@@ -29,6 +29,13 @@ export const updateMember = (id, formData) => {
 export const getMemberPayments = (payerId) =>
   api.get(`/api/payments`, { params: { payer_id: payerId } }).then((r) => (Array.isArray(r.data) ? r.data : []));
 
+// POST /api/payment/simulate-success/{id} → test payment gateway. Given a
+// member's NUMERIC id, marks the pending registration-fee payment as completed,
+// completes the Payment workflow step, and flips the member to Active once all
+// required steps are done. Returns the updated member/payment summary.
+export const simulatePaymentSuccess = (memberId) =>
+  api.post(`/api/payment/simulate-success/${memberId}`).then((r) => r.data);
+
 // Returns true if a member account exists for this exact email. Used by the
 // login page to decide — BEFORE sending an OTP — whether the person is
 // registered. There is no dedicated "exists" endpoint, so we reuse the members

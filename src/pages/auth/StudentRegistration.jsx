@@ -370,24 +370,24 @@ export default function StudentRegistration() {
 
   // ── Shared branding header (matches the login page) ──────────────
   const Header = () => (
-    <div className="flex items-center gap-3 mb-6">
+    <div className="flex items-center gap-5 mb-10">
       <img
         src={logo}
         alt="USJ Logo"
-        className="w-12 h-12 object-contain flex-shrink-0"
+        className="w-28 h-28 object-contain flex-shrink-0"
       />
       <div>
-        <p className="font-semibold text-gray-800 text-sm leading-tight">
+        <p className="font-semibold text-gray-800 text-2xl leading-tight">
           University of Sri Jayewardenepura
         </p>
-        <p className="text-xs text-blue-600">Sports Facility Portal</p>
+        <p className="text-lg text-blue-600">Sports Facility Portal</p>
       </div>
     </div>
   );
 
   // Footer copyright shared by every step (matches the login page).
   const Footer = () => (
-    <p className="text-xs text-gray-400 text-center mt-8">
+    <p className="text-base text-gray-500 text-center mt-8">
       © {new Date().getFullYear()} University of Sri Jayewardenepura
     </p>
   );
@@ -397,8 +397,8 @@ export default function StudentRegistration() {
   // ══════════════════════════════════════════
   if (alreadyRegistered) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 flex flex-col items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-sm text-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 flex flex-col items-center justify-center m-0 p-[14px]">
+        <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-md text-center">
           <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 bg-amber-50">
             <svg className="w-8 h-8 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -412,7 +412,7 @@ export default function StudentRegistration() {
           </p>
           <button
             onClick={() => navigate("/")}
-            className="w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold py-2.5 rounded-lg text-sm transition"
+            className="w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold py-3 rounded-lg text-sm transition"
           >
             Login with Email OTP
           </button>
@@ -428,18 +428,18 @@ export default function StudentRegistration() {
   if (step === "email") {
     return (
       <AuthShell>
-        <div className="w-full max-w-sm">
-          <div className="bg-white rounded-2xl shadow-lg p-8 w-full">
+        <div className="w-full max-w-2xl">
+          <div className="bg-white rounded-3xl shadow-xl p-12 w-full">
             <Header />
 
-            <h1 className="text-xl font-bold text-gray-900 mb-1 text-center">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2 text-center">
               Student Registration
             </h1>
-            <p className="text-sm text-gray-500 mb-6 text-center">
+            <p className="text-lg text-gray-500 mb-8 text-center">
               Enter your email to verify your identity before registering.
             </p>
 
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-lg font-medium text-gray-700 mb-2">
               Email Address <span className="text-red-500">*</span>
             </label>
             <input
@@ -450,23 +450,23 @@ export default function StudentRegistration() {
                 setEmailError("");
               }}
               placeholder="example@sjp.ac.lk"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mb-1"
+              className="w-full border border-gray-300 rounded-xl px-4 py-4 text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-1"
             />
             {emailError && (
-              <p className="text-xs text-red-500 mb-2">{emailError}</p>
+              <p className="text-base text-red-500 mb-2">{emailError}</p>
             )}
 
             <button
               onClick={handleSendOtp}
               disabled={otpSending || !email}
-              className="w-full bg-blue-700 hover:bg-blue-800 disabled:bg-blue-300 text-white font-semibold py-2.5 rounded-lg transition mt-2 text-sm"
+              className="w-full bg-blue-700 hover:bg-blue-800 disabled:bg-blue-300 text-white font-semibold py-5 rounded-xl transition mt-4 text-lg"
             >
               {otpSending ? "Sending OTP…" : "Send OTP"}
             </button>
 
-            <p className="flex items-center justify-center gap-1.5 text-xs text-gray-400 mt-4">
+            <p className="flex items-center justify-center gap-1.5 text-base text-gray-500 mt-4">
               <svg
-                className="w-3.5 h-3.5 text-green-500"
+                className="w-4 h-4 text-green-500"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -482,8 +482,8 @@ export default function StudentRegistration() {
             </p>
           </div>
 
-          <div className="text-center mt-5">
-            <p className="text-sm text-gray-500">
+          <div className="text-center mt-6">
+            <p className="text-lg text-gray-500">
               Already registered?{" "}
               <button
                 onClick={() => navigate("/")}
@@ -505,21 +505,21 @@ export default function StudentRegistration() {
   if (step === "otp") {
     return (
       <AuthShell>
-        <div className="w-full max-w-sm">
-          <div className="bg-white rounded-2xl shadow-lg p-8 w-full text-center">
+        <div className="w-full max-w-2xl">
+          <div className="bg-white rounded-3xl shadow-xl p-12 w-full text-center">
             <Header />
 
-            <h2 className="text-xl font-bold text-gray-900 mb-1">
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">
               Verify Your Email
             </h2>
-            <p className="text-sm text-gray-500 mb-1">
+            <p className="text-lg text-gray-500 mb-1">
               Enter the 6 digit code sent to
             </p>
-            <p className="text-sm font-semibold text-blue-700 mb-6">{email}</p>
+            <p className="text-lg font-semibold text-blue-700 mb-8">{email}</p>
 
             {/* OTP boxes */}
             <div
-              className="flex justify-center gap-2 mb-4"
+              className="flex justify-center gap-3 mb-4"
               onPaste={handleOtpPaste}
             >
               {otp.map((digit, i) => (
@@ -532,16 +532,16 @@ export default function StudentRegistration() {
                   value={digit}
                   onChange={(e) => handleOtpChange(i, e.target.value)}
                   onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                  className="w-11 h-13 border-2 border-gray-300 rounded-lg text-center text-xl font-bold focus:outline-none focus:border-blue-600 transition py-2"
+                  className="w-14 h-16 border-2 border-gray-300 rounded-lg text-center text-2xl font-bold focus:outline-none focus:border-blue-600 transition"
                 />
               ))}
             </div>
 
             {otpError && (
-              <p className="text-xs text-red-500 mb-2">{otpError}</p>
+              <p className="text-base text-red-500 mb-2">{otpError}</p>
             )}
 
-            <p className="text-xs text-gray-500 mb-4">
+            <p className="text-base text-gray-500 mb-4">
               {timer > 0 ? (
                 <>
                   Code expires in{" "}
@@ -564,14 +564,14 @@ export default function StudentRegistration() {
             <button
               onClick={handleVerifyOtp}
               disabled={otpVerifying || otp.join("").length < 6}
-              className="w-full bg-blue-700 hover:bg-blue-800 disabled:bg-blue-300 text-white font-semibold py-2.5 rounded-lg transition text-sm"
+              className="w-full bg-blue-700 hover:bg-blue-800 disabled:bg-blue-300 text-white font-semibold py-5 rounded-xl transition text-lg"
             >
               {otpVerifying ? "Verifying…" : "Verify & Continue"}
             </button>
 
             <button
               onClick={() => setStep("email")}
-              className="mt-3 text-xs text-gray-400 hover:text-blue-600 transition w-full"
+              className="mt-4 text-base text-gray-500 hover:text-blue-600 transition w-full"
             >
               Change email
             </button>
@@ -587,7 +587,7 @@ export default function StudentRegistration() {
   // ══════════════════════════════════════════
   if (step === "submitted") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 flex flex-col items-center justify-center m-0 p-[14px]">
         <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-md text-center">
           <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 bg-blue-50">
             <svg
@@ -657,7 +657,7 @@ export default function StudentRegistration() {
                 </div>
                 <span
                   className={`text-xs font-medium ${
-                    s.done || s.active ? "text-gray-700" : "text-gray-400"
+                    s.done || s.active ? "text-gray-700" : "text-gray-500"
                   }`}
                 >
                   {s.label}
@@ -668,13 +668,13 @@ export default function StudentRegistration() {
 
           <button
             onClick={() => alert("Payment gateway — coming soon!")}
-            className="w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold py-2.5 rounded-lg text-sm mb-3 transition"
+            className="w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold py-3 rounded-lg text-sm mb-3 transition"
           >
             Proceed to Payment
           </button>
           <button
             onClick={() => navigate("/")}
-            className="w-full text-sm text-gray-400 hover:text-blue-600 transition"
+            className="w-full text-sm text-gray-500 hover:text-blue-600 transition"
           >
             Back to Login
           </button>
@@ -726,7 +726,7 @@ export default function StudentRegistration() {
                     ? "bg-green-500 text-white border-green-500"
                     : active
                     ? "bg-blue-700 text-white border-blue-700"
-                    : "bg-gray-200 text-gray-400 border-gray-200"
+                    : "bg-gray-200 text-gray-500 border-gray-200"
                 }`}
               >
                 {done ? (
@@ -749,7 +749,7 @@ export default function StudentRegistration() {
               </div>
               <span
                 className={`text-xs font-semibold ${
-                  active || done ? "text-blue-700" : "text-gray-400"
+                  active || done ? "text-blue-700" : "text-gray-500"
                 }`}
               >
                 {t.label}
@@ -791,7 +791,7 @@ export default function StudentRegistration() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 py-5 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 m-0 p-[14px]">
       <div className="max-w-4xl mx-auto w-full">
         <Header />
 
@@ -839,7 +839,7 @@ export default function StudentRegistration() {
                 </div>
 
                 <div className="flex flex-col items-start">
-                  <p className="text-xs text-gray-400 mb-2">
+                  <p className="text-xs text-gray-500 mb-2">
                     Used for your QR membership card.{" "}
                     <span className="text-gray-300">
                       Min 300×300px · Max 2 MB · PNG/JPG
@@ -1071,7 +1071,7 @@ export default function StudentRegistration() {
                     <p className="font-semibold text-sm text-gray-800">
                       Student Under Club
                     </p>
-                    <p className="text-xs text-gray-400 mt-0.5">
+                    <p className="text-xs text-gray-500 mt-0.5">
                       Register under a sports club. Requires payment and admin
                       approval.
                     </p>
@@ -1105,7 +1105,7 @@ export default function StudentRegistration() {
                     <p className="font-semibold text-sm text-gray-800">
                       Independent User
                     </p>
-                    <p className="text-xs text-gray-400 mt-0.5">
+                    <p className="text-xs text-gray-500 mt-0.5">
                       Book facilities independently. Requires payment and admin
                       approval.
                     </p>
@@ -1133,7 +1133,7 @@ export default function StudentRegistration() {
                       );
                     }}
                     disabled={clubsLoading}
-                    className={`${fieldClass("club")} md:max-w-sm text-gray-700 disabled:bg-gray-50 disabled:text-gray-400`}
+                    className={`${fieldClass("club")} md:max-w-sm text-gray-700 disabled:bg-gray-50 disabled:text-gray-500`}
                   >
                     <option value="">
                       {clubsLoading ? "Loading clubs..." : "-- Select a Club --"}
@@ -1146,7 +1146,7 @@ export default function StudentRegistration() {
                   </select>
                 )}
                 {fieldError("club")}
-                <p className="text-xs text-gray-400 mt-1.5">
+                <p className="text-xs text-gray-500 mt-1.5">
                   Your registration will be reviewed by the club and admin.
                 </p>
               </div>
@@ -1158,7 +1158,7 @@ export default function StudentRegistration() {
               )}
               <button
                 onClick={handleNext}
-                className="bg-blue-700 hover:bg-blue-800 text-white font-semibold px-6 py-2.5 rounded-lg text-sm transition"
+                className="bg-blue-700 hover:bg-blue-800 text-white font-semibold px-6 py-3 rounded-lg text-sm transition"
               >
                 Next — Review
               </button>
@@ -1173,7 +1173,7 @@ export default function StudentRegistration() {
               <h2 className="font-bold text-sm mb-1 text-gray-900">
                 Review Your Details
               </h2>
-              <p className="text-xs text-gray-400 mb-5">
+              <p className="text-xs text-gray-500 mb-5">
                 Please confirm everything is correct before submitting.
               </p>
 
@@ -1191,7 +1191,7 @@ export default function StudentRegistration() {
                       <span className="text-xs text-gray-300">No photo</span>
                     )}
                   </div>
-                  <p className="text-xs text-gray-400 text-center mt-2">
+                  <p className="text-xs text-gray-500 text-center mt-2">
                     Profile Photo
                   </p>
                 </div>
@@ -1201,9 +1201,9 @@ export default function StudentRegistration() {
                   {summaryRows.map(([label, value]) => (
                     <div
                       key={label}
-                      className="py-2.5 grid grid-cols-1 sm:grid-cols-3 gap-1"
+                      className="py-3 grid grid-cols-1 sm:grid-cols-3 gap-1"
                     >
-                      <dt className="text-xs font-medium text-gray-400">
+                      <dt className="text-xs font-medium text-gray-500">
                         {label}
                       </dt>
                       <dd className="sm:col-span-2 text-sm text-gray-800 break-words">
@@ -1232,7 +1232,7 @@ export default function StudentRegistration() {
               <button
                 onClick={handleSubmit}
                 disabled={submitting}
-                className="bg-blue-700 hover:bg-blue-800 disabled:bg-blue-300 text-white font-semibold px-6 py-2.5 rounded-lg text-sm transition"
+                className="bg-blue-700 hover:bg-blue-800 disabled:bg-blue-300 text-white font-semibold px-6 py-3 rounded-lg text-sm transition"
               >
                 {submitting ? "Submitting…" : "Submit"}
               </button>

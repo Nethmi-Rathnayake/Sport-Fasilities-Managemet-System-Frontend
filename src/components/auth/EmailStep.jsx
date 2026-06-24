@@ -36,29 +36,29 @@ export default function EmailStep({ onSend, beforeSend, initialEmail = "" }) {
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-8 w-full">
-      
+    <div className="bg-white rounded-3xl shadow-xl p-12 w-full">
+
       {/* USJ Branding - logo  */}
-      <div className="flex items-center gap-3 mb-6">
+      <div className="flex items-center gap-5 mb-10">
         <img
           src={logo}
           alt="USJ Logo"
-          className="w-12 h-12 object-contain flex-shrink-0"
+          className="w-28 h-28 object-contain flex-shrink-0"
         />
         <div>
-          <p className="font-semibold text-gray-800 text-sm leading-tight">
+          <p className="font-semibold text-gray-800 text-2xl leading-tight">
             University of Sri Jayewardenepura
           </p>
-          <p className="text-xs text-blue-600">Sports Facility Portal</p>
+          <p className="text-lg text-blue-600">Sports Facility Portal</p>
         </div>
       </div>
 
-      <p className="text-center text-gray-500 text-sm mb-6">
+      <p className="text-center text-gray-500 text-lg mb-8">
         Enter your email to receive a<br />one time passcode (OTP)
       </p>
 
       <form onSubmit={handleSubmit}>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-lg font-medium text-gray-700 mb-2">
           Email Address
         </label>
         <input
@@ -66,13 +66,13 @@ export default function EmailStep({ onSend, beforeSend, initialEmail = "" }) {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="example@sjp.ac.lk"
-          className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mb-1"
+          className="w-full border border-gray-300 rounded-xl px-4 py-4 text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-1"
         />
-        {error && <p className="text-red-500 text-xs mb-2">{error}</p>}
-        <button 
+        {error && <p className="text-red-500 text-base mb-2">{error}</p>}
+        <button
           type="submit"
           disabled={loading || !email}
-          className="w-full bg-blue-700 hover:bg-blue-800 disabled:bg-blue-300 text-white font-semibold py-2.5 rounded-lg transition mt-2 text-sm"
+          className="w-full bg-blue-700 hover:bg-blue-800 disabled:bg-blue-300 text-white font-semibold py-5 rounded-xl transition mt-4 text-lg"
         >
           {loading ? "Sending…" : "Send OTP"}
         </button>

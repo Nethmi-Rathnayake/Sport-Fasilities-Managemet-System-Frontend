@@ -7,6 +7,7 @@ import SelectRegistration from "./pages/auth/SelectRegistration";
 import StudentRegistration from "./pages/auth/StudentRegistration";
 import ClubRegistration from "./pages/auth/ClubRegistration";
 import RegistrationStatus from "./pages/auth/RegistrationStatus";
+import PaymentMethod from "./pages/auth/PaymentMethod";
 import CoachDashboard from "./pages/coach/CoachDashboard";
 import StudentDashboard from "./pages/student/StudentDashboard";
 import IndependentDashboard from "./pages/independent/IndependentDashboard";
@@ -22,6 +23,7 @@ function App() {
         <Route path="/student-registration" element={<StudentRegistration />} />
         <Route path="/club-registration" element={<ClubRegistration />} />
         <Route path="/registration-status" element={<RegistrationStatus />} />
+        <Route path="/payment-method" element={<PaymentMethod />} />
         <Route path="/coach-dashboard" element={<CoachDashboard />} />
         <Route path="/student-dashboard" element={<StudentDashboard />} />
         <Route path="/independent-dashboard" element={<IndependentDashboard />} />

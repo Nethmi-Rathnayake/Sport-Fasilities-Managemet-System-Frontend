@@ -1,3 +1,21 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Global type scale. Every Tailwind text/spacing utility is rem-based, so the
+   root font-size is the single knob that scales the whole system. 14px is
+   -12.5% vs the 16px browser default — a more compact, comfortable UI. */
+@layer base {
+  html {
+    font-size: 14px;
+  }
+
+  /* Horizontal breathing room so content never sits flush against the left/right
+     viewport edges, with no top/bottom inset. Applied app-wide on the body.
+     Fixed-position bars (e.g. the home navbar) sit relative to the viewport, so
+     they inset by the same 14px themselves to stay aligned with this gap. */
+  body {
+    margin: 0;
+    padding: 0 14px;
+  }
+}

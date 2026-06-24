@@ -29,7 +29,7 @@ export default function AuthShell({ children }) {
   }, []);
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex m-0 p-[14px]">
       {/* LEFT — branded rotating image carousel (desktop only) */}
       <div className="relative hidden lg:flex flex-col w-1/2 overflow-hidden">
         {/* Cross-fading background images */}
@@ -52,23 +52,23 @@ export default function AuthShell({ children }) {
 
         {/* Foreground content */}
         <div className="relative z-10 flex flex-col justify-between h-full p-10 text-white">
-          <div className="flex items-center gap-3">
-            <img src={logo} alt="USJ Logo" className="w-11 h-11 object-contain" />
+          <div className="flex items-center gap-4">
+            <img src={logo} alt="USJ Logo" className="w-20 h-20 object-contain" />
             <div>
-              <p className="font-semibold text-sm leading-tight">
+              <p className="font-semibold text-xl leading-tight">
                 University of Sri Jayewardenepura
               </p>
-              <p className="text-xs text-blue-100">Sports Facility Portal</p>
+              <p className="text-base text-blue-100">Sports Facility Portal</p>
             </div>
           </div>
 
           <div className="mb-2">
-            <h2 className="text-3xl font-bold leading-snug mb-3">
+            <h2 className="text-5xl font-bold leading-snug mb-4">
               Empowering Sports,
               <br />
               Building Champions
             </h2>
-            <p className="text-sm text-blue-100 max-w-xs">
+            <p className="text-xl text-blue-100 max-w-md">
               Manage bookings, facilities and sports activities all in one place.
             </p>
 
