@@ -605,7 +605,7 @@ export default function StudentRegistration() {
             </svg>
           </div>
           <h2 className="text-xl font-bold text-gray-900 mb-2">
-            Registration Submitted!
+            Application Submitted!
           </h2>
           <p className="text-sm text-gray-500 mb-5">
             Complete your payment to activate your registration.
@@ -616,8 +616,6 @@ export default function StudentRegistration() {
               { label: "Email verified", done: true, active: false },
               { label: "Registration form submitted", done: true, active: false },
               { label: "Payment pending", done: false, active: true },
-              { label: "Admin approval", done: false, active: false },
-              { label: "QR Card issued — Account active", done: false, active: false },
             ].map((s, i) => (
               <div key={i} className="flex items-center gap-3">
                 <div
@@ -667,11 +665,6 @@ export default function StudentRegistration() {
               </div>
             ))}
           </div>
-
-          <p className="text-xs text-gray-400 mb-5">
-            Confirmation will be sent to{" "}
-            <span className="font-semibold text-gray-600">{email}</span>
-          </p>
 
           <button
             onClick={() => alert("Payment gateway — coming soon!")}
@@ -826,7 +819,7 @@ export default function StudentRegistration() {
                     <img
                       src={photoPreviewUrl}
                       alt="Preview"
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-contain"
                     />
                   ) : (
                     <svg
@@ -1004,6 +997,7 @@ export default function StudentRegistration() {
                     name="dob"
                     value={form.dob}
                     onChange={handleFormChange}
+                    max={new Date().toLocaleDateString("en-CA")}
                     className={`${inputClass} text-gray-700`}
                   />
                 </div>
@@ -1191,7 +1185,7 @@ export default function StudentRegistration() {
                       <img
                         src={photoPreviewUrl}
                         alt="Profile"
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-contain"
                       />
                     ) : (
                       <span className="text-xs text-gray-300">No photo</span>
@@ -1240,7 +1234,7 @@ export default function StudentRegistration() {
                 disabled={submitting}
                 className="bg-blue-700 hover:bg-blue-800 disabled:bg-blue-300 text-white font-semibold px-6 py-2.5 rounded-lg text-sm transition"
               >
-                {submitting ? "Submitting…" : "Submit Registration"}
+                {submitting ? "Submitting…" : "Submit"}
               </button>
             </div>
           </>

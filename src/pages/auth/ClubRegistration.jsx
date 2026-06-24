@@ -9,7 +9,13 @@ import {
 } from "../../services/authService";
 
 //const SPORTS = ["Cricket","Football","Badminton","Swimming","Athletics","Volleyball","Basketball","Tennis","Rugby","Netball","Table Tennis","Karate"];
-const YEARS = Array.from({ length: 10 }, (_, i) => (new Date().getFullYear() - i).toString());
+// All years from the current year back to 1950 (descending). The current year
+// is the newest selectable option, so future years are never offered.
+const EARLIEST_YEAR = 1900;
+const YEARS = Array.from(
+  { length: new Date().getFullYear() - EARLIEST_YEAR + 1 },
+  (_, i) => (new Date().getFullYear() - i).toString()
+);
 const TITLE_OPTIONS = ["Mr", "Mrs", "Ms", "Miss", "Dr", "Rev."];
 
 const STEPS = [
@@ -618,14 +624,12 @@ export default function ClubRegistration() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Club Registration Submitted!</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Application Submitted!</h2>
           <p className="text-sm text-gray-500 mb-5">Complete your payment to activate your club registration.</p>
           <div className="bg-gray-50 rounded-xl p-4 mb-5 text-left space-y-3">
             {[
               { label: "Registration submitted", done: true },
               { label: "Payment pending", active: true },
-              { label: "Admin verification" },
-              { label: "Club activated" },
             ].map((s, i) => (
               <div key={i} className="flex items-center gap-3">
                 <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
@@ -676,11 +680,11 @@ export default function ClubRegistration() {
   // ══════════════════════════════════════════════
   // SUMMARY PANEL (right)
   // ══════════════════════════════════════════════
-  const SummaryPanel = () => (
-    <div className="space-y-4">
+  const SummaryPanel = ({ twoColumn = false } = {}) => (
+    <div className={twoColumn ? "grid grid-cols-1 lg:grid-cols-2 gap-3 items-start" : "space-y-3"}>
       {/* Club Info */}
-      <div className="bg-white rounded-xl border border-gray-100 p-4">
-        <div className="flex items-center justify-between mb-3">
+      <div className="bg-white rounded-xl border border-gray-100 p-3">
+        <div className="flex items-center justify-between mb-2">
           <p className="text-xs font-bold text-blue-700">Club Information</p>
           {step !== 3 && (
             <button onClick={() => setStep(1)} className="text-xs flex items-center gap-1 text-blue-600">
@@ -707,8 +711,8 @@ export default function ClubRegistration() {
 
       {/* Coach List */}
       {coaches.some(c => c.nameWithInitials || c.lastName) && (
-        <div className="bg-white rounded-xl border border-gray-100 p-4">
-          <div className="flex items-center justify-between mb-3">
+        <div className="bg-white rounded-xl border border-gray-100 p-3">
+          <div className="flex items-center justify-between mb-2">
             <p className="text-xs font-bold text-blue-700">
               Coach List ({coaches.length} Coach{coaches.length > 1 ? "es" : ""})
             </p>
@@ -774,7 +778,7 @@ export default function ClubRegistration() {
       )}
 
       {/* Fee Breakdown */}
-      <div className="bg-white rounded-xl border border-gray-100 p-4">
+      <div className={`bg-white rounded-xl border border-gray-100 p-3 ${twoColumn ? "lg:col-span-2" : ""}`}>
         <p className="text-xs font-bold mb-3 text-blue-700">Registration Fee</p>
         <div className="space-y-2">
           <div className="flex justify-between">
@@ -795,17 +799,14 @@ export default function ClubRegistration() {
 
         {step === 3 && (
           <div className="mt-3">
-            <div className="bg-green-50 border border-green-100 rounded-lg p-2 mb-3 text-center">
-              <p className="text-xs text-green-700">After review, proceed to payment</p>
-            </div>
             {submitError && (
               <p className="text-xs text-red-500 mb-2 text-center">{submitError}</p>
             )}
             <button
               onClick={handleSubmit}
               disabled={submitting}
-              className="w-full bg-blue-700 hover:bg-blue-800 disabled:bg-blue-300 text-white font-semibold py-2.5 rounded-lg text-sm transition flex items-center justify-center gap-2">
-              {submitting ? "Submitting…" : "Proceed to Payment"}
+              className="w-full max-w-xs ml-auto bg-blue-700 hover:bg-blue-800 disabled:bg-blue-300 text-white font-semibold py-2.5 rounded-lg text-sm transition flex items-center justify-center gap-2">
+              {submitting ? "Submitting…" : "Submit"}
               {!submitting && (
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
@@ -909,7 +910,7 @@ export default function ClubRegistration() {
                           coach.photoError || coachErr(coach.id, "photo") ? "border-red-500" : "border-gray-200"
                         }`}>
                           {coach.photo ? (
-                            <img src={URL.createObjectURL(coach.photo)} alt="" className="w-full h-full object-cover" />
+                            <img src={URL.createObjectURL(coach.photo)} alt="" className="w-full h-full object-contain" />
                           ) : (
                             <svg className="w-7 h-7 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -992,6 +993,7 @@ export default function ClubRegistration() {
                         <Field label="Date of Birth">
                           <input type="date" value={coach.dob}
                             onChange={e => handleCoachChange(coach.id, "dob", e.target.value)}
+                            max={new Date().toLocaleDateString("en-CA")}
                             className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700" />
                         </Field>
                         <div className="sm:col-span-2 lg:col-span-3">
@@ -1016,22 +1018,22 @@ export default function ClubRegistration() {
 
           {/* ── STEP 3: Summary (centered in main area) ── */}
           {step === 3 && (
-            <div className="max-w-2xl mx-auto">
+            <div className="max-w-4xl mx-auto">
               <h2 className="font-bold text-base mb-1 text-center text-gray-900">Registration Summary</h2>
               <p className="text-xs text-gray-400 mb-4 text-center">Review your details before proceeding.</p>
-              <SummaryPanel />
+              <SummaryPanel twoColumn />
             </div>
           )}
 
           {/* Validation summary for the current step */}
           {navError && step < 3 && (
-            <p className={`text-sm text-red-500 mt-4 ${step === 3 ? "max-w-2xl mx-auto" : ""}`}>
+            <p className={`text-sm text-red-500 mt-4 ${step === 3 ? "max-w-4xl mx-auto" : ""}`}>
               {navError}
             </p>
           )}
 
           {/* Bottom nav */}
-          <div className={`flex items-center justify-between mt-6 ${step === 3 ? "max-w-2xl mx-auto" : ""}`}>
+          <div className={`flex items-center justify-between mt-6 ${step === 3 ? "max-w-4xl mx-auto" : ""}`}>
             <button
               onClick={() => step === 1 ? navigate("/") : setStep(s => s - 1)}
               className="px-5 py-2.5 border border-gray-300 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition">
